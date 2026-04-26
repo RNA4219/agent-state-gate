@@ -1,0 +1,45 @@
+{
+  "fixture_id": "AC-006",
+  "description": "typed_ref canonical出力",
+  "oracle_ref": "adapter_contract.md typed_ref Canonical Format (lines 9-40)",
+
+  "input": {
+    "domains": ["agent-taskstate", "memx", "agent-gatefield", "tracker"],
+    "entity_types": ["task", "decision", "run", "evidence", "artifact", "assessment"],
+    "providers": ["local", "jira", "github"]
+  },
+
+  "expected_output_format": {
+    "canonical_format": "<domain>:<entity_type>:<provider>:<entity_id>",
+    "segments": {
+      "domain": "string (lowercase)",
+      "entity_type": "string (lowercase)",
+      "provider": "string (lowercase)",
+      "entity_id": "string (preserves case)"
+    }
+  },
+
+  "expected_outputs": [
+    "agent-taskstate:task:local:01HTSK0001",
+    "agent-taskstate:decision:local:01HDEC0001",
+    "agent-taskstate:run:local:01HRUN0001",
+    "memx:evidence:local:01HEV0001",
+    "memx:artifact:local:01HART0001",
+    "agent-state-gate:assessment:local:01HASM0001",
+    "tracker:issue:jira:PROJ-123",
+    "tracker:issue:github:owner/repo#123"
+  ],
+
+  "legacy_compatibility": {
+    "3_segment_input": "agent-taskstate:task:01HTSK0001",
+    "canonicalized_output": "agent-taskstate:task:local:01HTSK0001"
+  },
+
+  "validation": {
+    "all_outputs_4_segment": true,
+    "domain_lowercase": true,
+    "entity_type_lowercase": true,
+    "provider_lowercase": true,
+    "entity_id_preserves_case": true
+  }
+}

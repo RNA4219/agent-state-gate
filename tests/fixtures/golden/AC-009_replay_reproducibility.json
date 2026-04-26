@@ -1,0 +1,55 @@
+{
+  "fixture_id": "AC-009",
+  "description": "Replay再現性 >= 99%",
+  "oracle_ref": "architecture.md Replay logic",
+
+  "input": {
+    "run_id": "01HRUN0001",
+    "historical_assessment_id": "01HASM0001",
+    "threshold_version": "sha256:threshold-v1-hash",
+    "context_hash": "sha256:context-hash-v1"
+  },
+
+  "expected_output": {
+    "ReplayResult": {
+      "run_id": "01HRUN0001",
+      "historical_assessment": {
+        "assessment_id": "01HASM0001",
+        "final_verdict": "allow",
+        "causal_trace": [
+          {
+            "step_id": "STEP-001",
+            "contribution_weight": 1.0
+          }
+        ]
+      },
+      "replayed_assessment": {
+        "assessment_id": "01HASM-REPLAY0001",
+        "final_verdict": "allow",
+        "causal_trace": [
+          {
+            "step_id": "STEP-001",
+            "contribution_weight": 1.0
+          }
+        ]
+      },
+      "decision_match": true,
+      "verdict_match": true,
+      "causal_trace_match": true
+    }
+  },
+
+  "reproducibility_criteria": {
+    "threshold_version_fixed": true,
+    "context_hash_fixed": true,
+    "decision_packet_version": "1.0.0",
+    "random_seed": "deterministic"
+  },
+
+  "validation": {
+    "historical_verdict": "allow",
+    "replayed_verdict": "allow",
+    "match_rate": 1.0,
+    "target_reproducibility": ">= 0.99"
+  }
+}

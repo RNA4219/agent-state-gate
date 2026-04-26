@@ -1,0 +1,81 @@
+{
+  "fixture_id": "AC-007",
+  "description": "Waiver審査プロセス動作",
+  "oracle_ref": "gate_config.yaml waiver.request_flow (lines 104-112)",
+
+  "flow_steps": [
+    {
+      "step": "submit",
+      "actor": "requester",
+      "required_fields": ["reason", "risk_assessment", "mitigation_plan", "expiry_date"],
+      "input": {
+        "waiver_type": "policy_override",
+        "reason": "Emergency production fix required",
+        "risk_assessment": {
+          "severity": "high",
+          "mitigation": "Rollback plan documented"
+        },
+        "mitigation_plan": "Manual rollback procedure documented",
+        "expiry_date": "2026-04-26T18:00:00Z"
+      },
+      "expected_output": {
+        "waiver_id": "01HWVR0001",
+        "status": "pending_review"
+      }
+    },
+    {
+      "step": "review",
+      "actor": "override_allowed_roles",
+      "min_reviewers": 1,
+      "deadline_hours": 24,
+      "input": {
+        "waiver_id": "01HWVR0001",
+        "reviewer_role": "project_lead"
+      },
+      "expected_output": {
+        "status": "under_review",
+        "reviewer_assigned": "project_lead_001"
+      }
+    },
+    {
+      "step": "approve_or_reject",
+      "actor": "override_allowed_roles",
+      "decision": "approve",
+      "input": {
+        "waiver_id": "01HWVR0001",
+        "reviewer_decision": "approve",
+        "reviewer_comment": "Risk mitigation acceptable"
+      },
+      "expected_output": {
+        "status": "approved",
+        "approved_at": "2026-04-26T14:00:00Z",
+        "expires_at": "2026-04-26T18:00:00Z"
+      }
+    }
+  ],
+
+  "invalidation_cases": [
+    {
+      "condition": "expiry_date_passed",
+      "input": {
+        "now": "2026-04-26T19:00:00Z",
+        "expires_at": "2026-04-26T18:00:00Z"
+      },
+      "expected_action": "auto_revoke"
+    },
+    {
+      "condition": "diff_hash_changed",
+      "input": {
+        "original_diff_hash": "sha256:abc123",
+        "new_diff_hash": "sha256:def456"
+      },
+      "expected_action": "auto_revoke"
+    }
+  ],
+
+  "validation": {
+    "flow_steps_completed": 3,
+    "required_fields_present": true,
+    "invalidation_conditions_handled": true
+  }
+}

@@ -1,0 +1,73 @@
+{
+  "fixture_id": "AC-002",
+  "description": "Assessment assembly正常動作",
+  "oracle_ref": "architecture.md Assessment structure (lines 129-225)",
+
+  "input": {
+    "assessment_engine.assemble_assessment": {
+      "decision_packet_ref": "agent-gatefield:decision:local:01HDEC0001",
+      "task_id": "agent-taskstate:task:local:01HTSK0001",
+      "run_id": "agent-taskstate:run:local:01HRUN0001",
+      "stage": "accepting",
+      "context_bundle_ref": "agent-taskstate:context_bundle:local:01HCBD0001"
+    }
+  },
+
+  "expected_output": {
+    "Assessment": {
+      "assessment_id": "01HASM0001",
+      "decision_packet_ref": "agent-gatefield:decision:local:01HDEC0001",
+      "task_id": "agent-taskstate:task:local:01HTSK0001",
+      "run_id": "agent-taskstate:run:local:01HRUN0001",
+      "stage": "accepting",
+      "context_bundle_ref": "agent-taskstate:context_bundle:local:01HCBD0001",
+
+      "stale_summary": {
+        "fresh": true,
+        "stale_items": [],
+        "stale_reasons": []
+      },
+      "obligation_summary": {
+        "obligations": [],
+        "fulfilled": [],
+        "unfulfilled": [],
+        "fulfillment_rate": 1.0
+      },
+      "approval_summary": {
+        "required_approvals": [],
+        "obtained_approvals": [],
+        "missing_approvals": []
+      },
+      "evidence_summary": {
+        "required_evidence": [],
+        "collected_evidence": [],
+        "missing_evidence": [],
+        "evidence_strength": 0.85,
+        "confidence_level": "high"
+      },
+
+      "final_verdict": "allow",
+      "causal_trace": [
+        {
+          "step_id": "STEP-001",
+          "source": "gatefield",
+          "rule_id": "pass-through",
+          "contribution_weight": 1.0,
+          "rationale": "All checks passed, no blockers detected"
+        }
+      ],
+
+      "audit_packet_ref": "agent-state-gate:audit_packet:local:01HAUD0001",
+      "threshold_version": "sha256:threshold-v1-hash",
+      "created_at": "2026-04-26T10:30:00Z"
+    }
+  },
+
+  "validation": {
+    "assessment_id_format": "uuid",
+    "typed_ref_4_segment": true,
+    "final_verdict_in_enum": ["allow", "needs_approval", "stale_blocked", "deny"],
+    "causal_trace_contribution_sum": 1.0,
+    "each_contribution_weight_range": [0.0, 1.0]
+  }
+}

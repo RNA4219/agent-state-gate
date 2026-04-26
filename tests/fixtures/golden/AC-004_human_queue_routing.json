@@ -1,0 +1,86 @@
+{
+  "fixture_id": "AC-004",
+  "description": "Human Queue routing正確",
+  "oracle_ref": "architecture.md Ownership Check Rules (lines 388-394)",
+
+  "cases": [
+    {
+      "case_id": "AC-004-CASE-001",
+      "input": {
+        "severity": "critical",
+        "reason_code": "taboo",
+        "task_owner_role": "developer",
+        "required_role": "security_reviewer"
+      },
+      "expected_routing": {
+        "required_role": "security_reviewer",
+        "cross_owner_approval": true,
+        "sla": {
+          "ack_minutes": 15,
+          "decision_minutes": 60
+        }
+      }
+    },
+    {
+      "case_id": "AC-004-CASE-002",
+      "input": {
+        "severity": "high",
+        "reason_code": "rejected_case",
+        "task_owner_role": "developer",
+        "required_role": "project_lead"
+      },
+      "expected_routing": {
+        "required_role": "project_lead",
+        "cross_owner_approval": true,
+        "sla": {
+          "ack_minutes": 60,
+          "decision_minutes": 240
+        }
+      }
+    },
+    {
+      "case_id": "AC-004-CASE-003",
+      "input": {
+        "severity": "medium",
+        "reason_code": "stale",
+        "task_owner_role": "developer",
+        "required_role": "owner"
+      },
+      "expected_routing": {
+        "required_role": "owner",
+        "cross_owner_approval": false,
+        "sla": {
+          "ack_hours": 8,
+          "decision_hours": 24
+        }
+      }
+    },
+    {
+      "case_id": "AC-004-CASE-004",
+      "input": {
+        "severity": "critical",
+        "reason_code": "policy_override",
+        "permission_scope": ["admin"],
+        "data_classification_access": ["confidential"]
+      },
+      "expected_routing": {
+        "required_role": "security_reviewer",
+        "higher_authority_review": true,
+        "sla": {
+          "ack_minutes": 15,
+          "decision_minutes": 60
+        }
+      }
+    }
+  ],
+
+  "validation": {
+    "severity_to_role_mapping": {
+      "critical": ["security_reviewer", "governance_board"],
+      "high": ["project_lead"],
+      "medium": ["owner"],
+      "low": []
+    },
+    "ownership_context_required": true
+  }
+}

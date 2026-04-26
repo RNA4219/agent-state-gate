@@ -1,0 +1,96 @@
+{
+  "fixture_id": "AC-003",
+  "description": "Verdict transformation 9条件正確",
+  "oracle_ref": "BLUEPRINT.md Decision Table (lines 84-95)",
+
+  "cases": [
+    {
+      "case_id": "AC-003-CASE-001",
+      "input": {
+        "gatefield_decision": "pass",
+        "stale_fresh": true,
+        "obligation_fulfilled": true,
+        "approval_fulfilled": true
+      },
+      "expected_verdict": "allow"
+    },
+    {
+      "case_id": "AC-003-CASE-002",
+      "input": {
+        "gatefield_decision": "pass",
+        "stale_fresh": false,
+        "stale_items": [{"item_type": "doc", "stale_reason": "version_changed"}]
+      },
+      "expected_verdict": "stale_blocked"
+    },
+    {
+      "case_id": "AC-003-CASE-003",
+      "input": {
+        "gatefield_decision": "pass",
+        "evidence_strength": 0.70,
+        "evidence_strength_threshold": 0.85
+      },
+      "expected_verdict": "needs_approval"
+    },
+    {
+      "case_id": "AC-003-CASE-004",
+      "input": {
+        "gatefield_decision": "pass",
+        "obligation_fulfillment_rate": 0.90,
+        "obligation_critical_unfulfilled": false,
+        "obligation_high_unfulfilled": true
+      },
+      "expected_verdict": "require_human"
+    },
+    {
+      "case_id": "AC-003-CASE-005",
+      "input": {
+        "gatefield_decision": "warn",
+        "self_correction_count": 1,
+        "permission_level": "read"
+      },
+      "expected_verdict": "revise"
+    },
+    {
+      "case_id": "AC-003-CASE-006",
+      "input": {
+        "gatefield_decision": "warn",
+        "permission_level": "admin",
+        "uncertainty_score": 0.20
+      },
+      "expected_verdict": "require_human"
+    },
+    {
+      "case_id": "AC-003-CASE-007",
+      "input": {
+        "gatefield_decision": "hold",
+        "approval_missing": true,
+        "uncertainty_score": 0.10
+      },
+      "expected_verdict": "needs_approval"
+    },
+    {
+      "case_id": "AC-003-CASE-008",
+      "input": {
+        "gatefield_decision": "hold",
+        "sla_status": "timeout",
+        "severity": "critical"
+      },
+      "expected_verdict": "deny"
+    },
+    {
+      "case_id": "AC-003-CASE-009",
+      "input": {
+        "gatefield_decision": "block",
+        "static_hard_fail": true
+      },
+      "expected_verdict": "deny"
+    }
+  ],
+
+  "validation": {
+    "total_cases": 9,
+    "each_case_verdict_match_expected": true,
+    "no_ambiguous_or_conditions": true
+  }
+}

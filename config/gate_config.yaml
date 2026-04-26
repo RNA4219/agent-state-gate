@@ -1,0 +1,177 @@
+# Gate Configuration Template
+
+version: 0.1.0
+environment: local  # local | ci | staging | production
+
+# Adapter Configuration
+adapters:
+  gatefield:
+    enabled: true
+    endpoint: "${AGENT_GATEFIELD_URL:-http://localhost:8080}"
+    timeout_ms: 5000
+    failure_policy: "fail-closed"  # fail-closed | fail-open | needs-approval
+
+  taskstate:
+    enabled: true
+    endpoint: "${AGENT_TASKSTATE_URL:-http://localhost:8081}"
+    timeout_ms: 3000
+    failure_policy: "fail-closed"
+
+  protocols:
+    enabled: true
+    schema_path: "${AGENT_PROTOCOLS_SCHEMAS:-../agent-protocols/schemas}"
+    timeout_ms: 2000
+    failure_policy: "needs-approval"
+
+  memx:
+    enabled: true
+    endpoint: "${MEMX_RESOLVER_URL:-http://localhost:8082}"
+    timeout_ms: 3000
+    failure_policy: "stale-blocked"
+
+  shipyard:
+    enabled: true
+    endpoint: "${SHIPYARD_CP_URL:-http://localhost:3100}"
+    timeout_ms: 5000
+    failure_policy: "fail-closed"
+
+  workflow:
+    enabled: true
+    docs_path: "${WORKFLOW_COOKBOOK_PATH:-../workflow-cookbook}"
+    timeout_ms: 2000
+    failure_policy: "needs-approval"
+
+# Verdict Transformation Rules
+verdict:
+  stale_blocked_on_required_docs: true
+  needs_approval_on_missing_evidence: true
+  deny_on_critical_static_fail: true
+
+  authority_hierarchy:
+    human_policy: 4
+    repo_policy: 3
+    task_contract: 2
+    agent_summary: 1
+
+# Human Attention Queue
+human_queue:
+  sla:
+    critical:
+      ack_minutes: 15
+      decision_minutes: 60
+    high:
+      ack_minutes: 60
+      decision_minutes: 240
+    medium:
+      ack_hours: 8
+      decision_hours: 24
+    low:
+      ack_minutes: null
+      decision: "backlog"
+
+  escalation:
+    critical: ["project_lead", "governance_board"]
+    high: ["project_lead"]
+    medium: ["owner"]
+
+  reviewer_roles:
+    security: "security_reviewer"
+    release: "release_manager"
+    architecture: "project_lead"
+    acceptance: "qa_owner"
+
+# Audit Configuration
+audit:
+  retention:
+    audit_days: 365
+    ops_days: 90
+    pii_sensitive_days: 30
+
+  export_format: "jsonl"  # jsonl | otlp
+
+  trace_required: true
+  payload_redaction: true
+
+# Security
+security:
+  taint_tracking: true
+  secret_handling: "strict"  # strict | permissive
+  approval_binding: true
+  override_allowed_roles: ["project_lead", "governance_board"]
+
+  # Waiver審査プロセス
+  waiver:
+    # Waiver申請フロー
+    request_flow:
+      - step: "submit"
+        actor: "requester"
+        required_fields: ["reason", "risk_assessment", "mitigation_plan", "expiry_date"]
+      - step: "review"
+        actor: "override_allowed_roles"
+        min_reviewers: 1
+        deadline_hours: 24
+      - step: "approve_or_reject"
+        actor: "override_allowed_roles"
+        decision: "approve | reject | request_info"
+
+    # Waiver審査SLA
+    sla:
+      review_ack_hours: 4           # 审査受付期限
+      review_decision_hours: 24     # 审査決定期限
+      critical_decision_hours: 8    # critical waiver決定期限
+      escalation_hours: 48          # escalation期限
+      max_expiry_hours: 72          # waiver最大有効期限
+
+    # Waiver種別と承認要件
+    types:
+      policy_override:
+        required_reviewers: ["project_lead", "security_reviewer"]
+        max_duration_hours: 72
+        requires_audit_log: true
+      stale_approval_usage:
+        required_reviewers: ["project_lead"]
+        max_duration_hours: 24
+        requires_diff_binding_check: true
+      evidence_missing_accept:
+        required_reviewers: ["qa_owner"]
+        max_duration_hours: 48
+        requires_remediation_plan: true
+      gate_bypass:
+        required_reviewers: ["governance_board"]
+        max_duration_hours: 8
+        requires_incident_log: true
+
+    # Waiver無効化条件
+    invalidation:
+      - condition: "expiry_date_passed"
+        action: "auto_revoke"
+      - condition: "diff_hash_changed"
+        action: "auto_revoke"
+      - condition: "context_hash_changed"
+        action: "auto_revoke"
+      - condition: "policy_version_updated"
+        action: "review_required"
+
+    # Audit記録
+    audit:
+      waiver_log_retention_days: 365
+      include_rationale: true
+      include_mitigation_plan: true
+      include_expiry_tracking: true
+
+# MCP Surface
+mcp:
+  read_only_surface:
+    - "context.recall"
+    - "context.stale_check"
+    - "state_gate.assess"
+    - "attention.list"
+    - "run.replay_context"
+
+  consent_required:
+    - "gate.evaluate"
+
+  internal_only:
+    - "evidence.record"
+    - "approval.create"
+    - "waiver.create"

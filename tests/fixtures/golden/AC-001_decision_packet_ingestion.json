@@ -1,0 +1,75 @@
+{
+  "fixture_id": "AC-001",
+  "description": "DecisionPacket ingestion正常動作",
+  "oracle_ref": "DATA_TYPES_SPEC DecisionPacket schema (lines 779-1141)",
+
+  "input": {
+    "gatefield_adapter.evaluate": {
+      "artifact": {
+        "artifact_id": "01HART0001",
+        "artifact_type": "code_patch",
+        "content_hash": "sha256:abc123def456"
+      },
+      "trace": {
+        "trace_id": "a1b2c3d4e5f6789012345678901234ab",
+        "span_id": "1234567890abcdef"
+      },
+      "rule_results": {
+        "lint": {"status": "pass", "count": 0},
+        "sast": {"status": "pass", "count": 0},
+        "secret_scan": {"status": "pass", "count": 0}
+      }
+    }
+  },
+
+  "expected_output": {
+    "DecisionPacket": {
+      "schema_version": "1.0.0",
+      "decision_id": "01HDEC0001",
+      "run_id": "01HRUN0001",
+      "artifact_id": "01HART0001",
+      "decision": "pass",
+      "composite_score": 0.85,
+      "factors": [
+        {
+          "name": "constitution_alignment",
+          "value": 0.92,
+          "weight": 0.20,
+          "contribution": 0.184
+        },
+        {
+          "name": "taboo_proximity",
+          "value": 0.15,
+          "weight": 0.30,
+          "contribution": 0.045
+        }
+      ],
+      "exemplar_refs": [
+        {
+          "doc_id": "accepted-001",
+          "axis_type": "accepted",
+          "similarity": 0.78
+        }
+      ],
+      "action": {
+        "action_type": "continue"
+      },
+      "threshold_version": "sha256:threshold-v1-hash",
+      "policy_version": "gate-policy-v1",
+      "static_gate_summary": {
+        "gates_executed": ["lint", "sast", "secret_scan"],
+        "all_passed": true
+      },
+      "created_at": "2026-04-26T10:30:00Z"
+    }
+  },
+
+  "validation": {
+    "schema_version_equals": "1.0.0",
+    "decision_id_format": "uuid",
+    "decision_in_enum": ["pass", "warn", "hold", "block"],
+    "factors_non_empty": true,
+    "composite_score_range": [0.0, 1.0],
+    "threshold_version_format": "sha256:hash"
+  }
+}
