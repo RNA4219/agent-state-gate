@@ -1,6 +1,6 @@
 [project]
 name = "agent-state-gate"
-version = "0.1.0"
+version = "0.4.2"
 description = "Engineering governance integration layer for Context Graph and State-space Gate harness"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -12,6 +12,7 @@ authors = [
 dependencies = [
     "pydantic>=2.0",
     "pyyaml>=6.0",
+    "requests>=2.28",
 ]
 
 [project.optional-dependencies]
@@ -44,4 +45,4 @@ target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "N", "UP", "B", "C4"]
-ignore = ["E501"]
+ignore = ["E501", "B904", "E402"]

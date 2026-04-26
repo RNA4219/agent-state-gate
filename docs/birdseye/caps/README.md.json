@@ -1,0 +1,11 @@
+{
+  "id": "README.md",
+  "role": "overview",
+  "public_api": [],
+  "summary": "agent-state-gate の目的、責務、MCP surface、P0 scope、runtime 方針、関連 repo を案内する入口。",
+  "deps_out": ["HUB.codex.md", "BLUEPRINT.md", "docs/requirements.md", "docs/RUNBOOK.md", "docs/EVALUATION.md", "docs/adapter_contract.md"],
+  "deps_in": ["HUB.codex.md", "docs/BIRDSEYE.md"],
+  "risks": ["README だけを読んだ利用者が mock / in-memory を本番代替と誤解しないよう Runtime 方針を維持する"],
+  "tests": ["手動: 参照ドキュメントが存在することを確認"],
+  "generated_at": "00001"
+}

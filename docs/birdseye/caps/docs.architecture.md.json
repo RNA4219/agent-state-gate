@@ -1,0 +1,11 @@
+{
+  "id": "docs/architecture.md",
+  "role": "architecture",
+  "public_api": [],
+  "summary": "Assessment、Human Queue、SLA、audit、core engine の構造を定義する設計ドキュメント。",
+  "deps_out": ["docs/requirements.md", "docs/api_spec.md", "docs/adapter_contract.md"],
+  "deps_in": ["docs/requirements.md", "HUB.codex.md"],
+  "risks": ["正本境界と構造定義が BLUEPRINT / requirements とズレること"],
+  "tests": ["Assessment schema validation", "SLA enforcement", "audit packet generation"],
+  "generated_at": "00001"
+}

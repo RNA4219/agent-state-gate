@@ -1,0 +1,113 @@
+{
+  "generated_at": "00001",
+  "nodes": {
+    "README.md": {
+      "role": "overview",
+      "caps": "docs/birdseye/caps/README.md.json",
+      "mtime": "00001"
+    },
+    "HUB.codex.md": {
+      "role": "navigation",
+      "caps": "docs/birdseye/caps/HUB.codex.md.json",
+      "mtime": "00001"
+    },
+    "BLUEPRINT.md": {
+      "role": "requirements",
+      "caps": "docs/birdseye/caps/BLUEPRINT.md.json",
+      "mtime": "00001"
+    },
+    "GUARDRAILS.md": {
+      "role": "policy",
+      "caps": "docs/birdseye/caps/GUARDRAILS.md.json",
+      "mtime": "00001"
+    },
+    "docs/requirements.md": {
+      "role": "source_of_truth",
+      "caps": "docs/birdseye/caps/docs.requirements.md.json",
+      "mtime": "00001"
+    },
+    "docs/RUNBOOK.md": {
+      "role": "operations",
+      "caps": "docs/birdseye/caps/docs.RUNBOOK.md.json",
+      "mtime": "00001"
+    },
+    "docs/EVALUATION.md": {
+      "role": "quality",
+      "caps": "docs/birdseye/caps/docs.EVALUATION.md.json",
+      "mtime": "00001"
+    },
+    "docs/CHECKLISTS.md": {
+      "role": "checklist",
+      "caps": "docs/birdseye/caps/docs.CHECKLISTS.md.json",
+      "mtime": "00001"
+    },
+    "docs/architecture.md": {
+      "role": "architecture",
+      "caps": "docs/birdseye/caps/docs.architecture.md.json",
+      "mtime": "00001"
+    },
+    "docs/api_spec.md": {
+      "role": "api",
+      "caps": "docs/birdseye/caps/docs.api_spec.md.json",
+      "mtime": "00001"
+    },
+    "docs/adapter_contract.md": {
+      "role": "adapter_contract",
+      "caps": "docs/birdseye/caps/docs.adapter_contract.md.json",
+      "mtime": "00001"
+    },
+    "docs/PRODUCT_ACCEPTANCE_REFACTOR.md": {
+      "role": "acceptance_refactor",
+      "caps": "docs/birdseye/caps/docs.PRODUCT_ACCEPTANCE_REFACTOR.md.json",
+      "mtime": "00001"
+    },
+    "deep-research-report (9).md": {
+      "role": "research_log",
+      "caps": "docs/birdseye/caps/deep-research-report (9).md.json",
+      "mtime": "00001"
+    },
+    "docs/BIRDSEYE.md": {
+      "role": "fallback",
+      "caps": "docs/birdseye/caps/docs.BIRDSEYE.md.json",
+      "mtime": "00001"
+    },
+    "docs/birdseye/index.json": {
+      "role": "index",
+      "caps": "docs/birdseye/caps/docs.birdseye.index.json.json",
+      "mtime": "00001"
+    }
+  },
+  "edges": [
+    ["README.md", "HUB.codex.md"],
+    ["README.md", "BLUEPRINT.md"],
+    ["README.md", "docs/requirements.md"],
+    ["README.md", "docs/RUNBOOK.md"],
+    ["README.md", "docs/EVALUATION.md"],
+    ["README.md", "docs/adapter_contract.md"],
+    ["HUB.codex.md", "BLUEPRINT.md"],
+    ["HUB.codex.md", "GUARDRAILS.md"],
+    ["HUB.codex.md", "docs/requirements.md"],
+    ["HUB.codex.md", "docs/RUNBOOK.md"],
+    ["HUB.codex.md", "docs/EVALUATION.md"],
+    ["HUB.codex.md", "docs/CHECKLISTS.md"],
+    ["BLUEPRINT.md", "docs/requirements.md"],
+    ["BLUEPRINT.md", "docs/EVALUATION.md"],
+    ["BLUEPRINT.md", "docs/CHECKLISTS.md"],
+    ["GUARDRAILS.md", "docs/requirements.md"],
+    ["GUARDRAILS.md", "docs/RUNBOOK.md"],
+    ["GUARDRAILS.md", "docs/EVALUATION.md"],
+    ["docs/requirements.md", "docs/architecture.md"],
+    ["docs/requirements.md", "docs/api_spec.md"],
+    ["docs/requirements.md", "docs/adapter_contract.md"],
+    ["docs/requirements.md", "docs/RUNBOOK.md"],
+    ["docs/RUNBOOK.md", "docs/CHECKLISTS.md"],
+    ["docs/EVALUATION.md", "docs/CHECKLISTS.md"],
+    ["docs/PRODUCT_ACCEPTANCE_REFACTOR.md", "docs/EVALUATION.md"],
+    ["docs/PRODUCT_ACCEPTANCE_REFACTOR.md", "docs/CHECKLISTS.md"],
+    ["docs/PRODUCT_ACCEPTANCE_REFACTOR.md", "docs/RUNBOOK.md"],
+    ["docs/adapter_contract.md", "docs/api_spec.md"],
+    ["deep-research-report (9).md", "docs/requirements.md"],
+    ["docs/BIRDSEYE.md", "docs/birdseye/index.json"],
+    ["docs/birdseye/index.json", "docs/BIRDSEYE.md"]
+  ]
+}

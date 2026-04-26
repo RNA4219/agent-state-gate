@@ -1,0 +1,88 @@
+{
+  "generated_at": "00001",
+  "index_snapshot": "docs/birdseye/index.json",
+  "refresh_command": "manual: update docs/birdseye/index.json, hot.json, and affected caps together",
+  "curation_notes": "agent-state-gate の初動読込用ホットリスト。統合層の責務、Production runtime、adapter 契約、検収条件を低コストに把握するための主要ノードを並べる。",
+  "nodes": [
+    {
+      "id": "README.md",
+      "role": "bootstrap",
+      "reason": "repo の目的、責務、関連ドキュメント、runtime 方針を最短で把握する入口。",
+      "caps": "docs/birdseye/caps/README.md.json",
+      "edges": ["HUB.codex.md", "BLUEPRINT.md", "docs/requirements.md", "docs/RUNBOOK.md"],
+      "last_verified_at": "2026-04-26T00:00:00Z"
+    },
+    {
+      "id": "HUB.codex.md",
+      "role": "navigation",
+      "reason": "ドキュメント依存関係と実装フェーズのハブ。",
+      "caps": "docs/birdseye/caps/HUB.codex.md.json",
+      "edges": ["BLUEPRINT.md", "GUARDRAILS.md", "docs/requirements.md", "docs/RUNBOOK.md", "docs/EVALUATION.md"],
+      "last_verified_at": "2026-04-26T00:00:00Z"
+    },
+    {
+      "id": "docs/requirements.md",
+      "role": "source_of_truth",
+      "reason": "P0 機能、runtime/deployment 要件、正本境界を持つ正本仕様。",
+      "caps": "docs/birdseye/caps/docs.requirements.md.json",
+      "edges": ["docs/architecture.md", "docs/api_spec.md", "docs/adapter_contract.md", "docs/RUNBOOK.md"],
+      "last_verified_at": "2026-04-26T00:00:00Z"
+    },
+    {
+      "id": "BLUEPRINT.md",
+      "role": "requirements",
+      "reason": "責務境界、P0/P1/Production Enforce の entry criteria、verdict 変換を確認する入口。",
+      "caps": "docs/birdseye/caps/BLUEPRINT.md.json",
+      "edges": ["docs/requirements.md", "docs/EVALUATION.md", "docs/CHECKLISTS.md"],
+      "last_verified_at": "2026-04-26T00:00:00Z"
+    },
+    {
+      "id": "docs/RUNBOOK.md",
+      "role": "operations",
+      "reason": "local/CI/staging/production の pgvector runtime と障害時挙動を定義。",
+      "caps": "docs/birdseye/caps/docs.RUNBOOK.md.json",
+      "edges": ["docs/requirements.md", "docs/CHECKLISTS.md"],
+      "last_verified_at": "2026-04-26T00:00:00Z"
+    },
+    {
+      "id": "GUARDRAILS.md",
+      "role": "policy",
+      "reason": "二重実装禁止、Runtime 境界、MCP surface 制限を確認する安全方針。",
+      "caps": "docs/birdseye/caps/GUARDRAILS.md.json",
+      "edges": ["docs/requirements.md", "docs/RUNBOOK.md", "docs/EVALUATION.md"],
+      "last_verified_at": "2026-04-26T00:00:00Z"
+    },
+    {
+      "id": "docs/adapter_contract.md",
+      "role": "adapter_contract",
+      "reason": "既存 OSS との接続境界、failure_policy、実 API 照合の入口。",
+      "caps": "docs/birdseye/caps/docs.adapter_contract.md.json",
+      "edges": ["docs/requirements.md", "docs/api_spec.md"],
+      "last_verified_at": "2026-04-26T00:00:00Z"
+    },
+    {
+      "id": "docs/EVALUATION.md",
+      "role": "quality",
+      "reason": "Runtime portability と Production runtime readiness を含む受入基準。",
+      "caps": "docs/birdseye/caps/docs.EVALUATION.md.json",
+      "edges": ["docs/CHECKLISTS.md", "BLUEPRINT.md"],
+      "last_verified_at": "2026-04-26T00:00:00Z"
+    },
+    {
+      "id": "docs/PRODUCT_ACCEPTANCE_REFACTOR.md",
+      "role": "acceptance_refactor",
+      "reason": "プロダクト検収の No-Go 理由、P0/P1/P2 リファクタ事項、実行順を確認する台帳。",
+      "caps": "docs/birdseye/caps/docs.PRODUCT_ACCEPTANCE_REFACTOR.md.json",
+      "edges": ["docs/EVALUATION.md", "docs/CHECKLISTS.md", "docs/RUNBOOK.md"],
+      "last_verified_at": "2026-04-26T00:00:00Z"
+    },
+    {
+      "id": "docs/birdseye/index.json",
+      "role": "index",
+      "reason": "Birdseye hop 計算と caps 参照の正本。",
+      "caps": "docs/birdseye/caps/docs.birdseye.index.json.json",
+      "edges": ["docs/BIRDSEYE.md"],
+      "last_verified_at": "2026-04-26T00:00:00Z"
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "id": "deep-research-report (9).md",
+  "role": "research_log",
+  "public_api": [],
+  "summary": "Context Graph 拡張、State-space Gate 統合、agent-gatefield / agent-state-gate 責務境界、runtime 方針を含む詳細検討ログ。",
+  "deps_out": ["docs/requirements.md", "BLUEPRINT.md", "docs/RUNBOOK.md"],
+  "deps_in": [],
+  "risks": ["検討ログの旧表現を正本仕様より優先して読まないこと"],
+  "tests": ["手動: 正本反映済みの項目は docs/requirements.md / BLUEPRINT.md / RUNBOOK.md を優先する"],
+  "generated_at": "00001"
+}

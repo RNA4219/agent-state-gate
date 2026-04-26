@@ -1,0 +1,11 @@
+{
+  "id": "BLUEPRINT.md",
+  "role": "requirements",
+  "public_api": [],
+  "summary": "agent-state-gate の目的、正本境界、P0、Release Stage、Production Enforce entry criteria、verdict 変換規則、RUNBOOK 連携を定義する。",
+  "deps_out": ["docs/requirements.md", "docs/EVALUATION.md", "docs/CHECKLISTS.md", "docs/adapter_contract.md"],
+  "deps_in": ["README.md", "HUB.codex.md", "docs/BIRDSEYE.md"],
+  "risks": ["agent-state-gate と agent-gatefield の責務境界が崩れると二重実装が発生する", "Production runtime 条件が抜けると mock 本番代替の誤運用につながる"],
+  "tests": ["手動: Production Enforce entry criteria に runtime readiness が含まれることを確認"],
+  "generated_at": "00001"
+}

@@ -1,0 +1,11 @@
+{
+  "id": "docs/EVALUATION.md",
+  "role": "quality",
+  "public_api": [],
+  "summary": "P0 / P1 acceptance criteria、探索テスト、oracle matrix、品質指標、Production Enforce Gate を定義する。",
+  "deps_out": ["docs/CHECKLISTS.md", "BLUEPRINT.md", "docs/RUNBOOK.md"],
+  "deps_in": ["README.md", "HUB.codex.md", "docs/requirements.md"],
+  "risks": ["AC-014 / AC-015 を外すと runtime 要件が検収から漏れる"],
+  "tests": ["AC-014 Runtime portability", "AC-015 Production runtime readiness"],
+  "generated_at": "00001"
+}

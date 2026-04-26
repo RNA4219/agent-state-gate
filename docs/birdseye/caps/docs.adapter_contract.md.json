@@ -1,0 +1,11 @@
+{
+  "id": "docs/adapter_contract.md",
+  "role": "adapter_contract",
+  "public_api": ["gatefield_adapter.evaluate", "memx_adapter.resolve_docs", "taskstate_adapter.get_context_bundle", "workflow_adapter.get_birdseye_caps"],
+  "summary": "既存 OSS adapter の interface、実 API 対応、failure_policy、timeout、idempotency を定義する。",
+  "deps_out": ["docs/requirements.md", "docs/api_spec.md", "BLUEPRINT.md"],
+  "deps_in": ["README.md", "HUB.codex.md", "docs/requirements.md"],
+  "risks": ["実 API 名・言語境界・同期/非同期・認証境界との照合漏れ"],
+  "tests": ["adapter contract tests", "failure_policy fixture"],
+  "generated_at": "00001"
+}

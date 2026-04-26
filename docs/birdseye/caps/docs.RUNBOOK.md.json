@@ -1,0 +1,11 @@
+{
+  "id": "docs/RUNBOOK.md",
+  "role": "operations",
+  "public_api": [],
+  "summary": "local / CI / staging / production の runtime 手順、Production Enforce 前確認、pgvector 障害時挙動、rollback、incident triage、PRODUCT_ACCEPTANCE_REFACTOR への連携を定義する。",
+  "deps_out": ["docs/requirements.md", "docs/CHECKLISTS.md", "docs/EVALUATION.md"],
+  "deps_in": ["README.md", "HUB.codex.md", "GUARDRAILS.md", "docs/requirements.md"],
+  "risks": ["mock / in-memory を本番代替にしない", "pgvector 障害時に high-risk action を allow しない"],
+  "tests": ["手動: Local / CI は Windows native build なしで動作確認", "手動: Production runtime checklist を全項目確認"],
+  "generated_at": "00001"
+}

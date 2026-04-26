@@ -1,0 +1,11 @@
+{
+  "id": "docs/BIRDSEYE.md",
+  "role": "fallback",
+  "public_api": [],
+  "summary": "Birdseye JSON が読めない場合の人間向け Hot List、主要 edges、runtime 要点、更新手順。",
+  "deps_out": ["docs/birdseye/index.json", "docs/birdseye/hot.json", "docs/birdseye/caps/"],
+  "deps_in": ["docs/birdseye/index.json", "README.md", "HUB.codex.md"],
+  "risks": ["JSON とフォールバック記述の乖離"],
+  "tests": ["手動: Hot List が hot.json と矛盾しないことを確認"],
+  "generated_at": "00001"
+}

@@ -1,0 +1,11 @@
+{
+  "id": "HUB.codex.md",
+  "role": "navigation",
+  "public_api": [],
+  "summary": "repo 内の仕様・運用 MD を集約し、作業ユニットと依存関係を整理するハブ。",
+  "deps_out": ["README.md", "BLUEPRINT.md", "GUARDRAILS.md", "docs/requirements.md", "docs/RUNBOOK.md", "docs/EVALUATION.md", "docs/CHECKLISTS.md"],
+  "deps_in": ["README.md", "docs/BIRDSEYE.md"],
+  "risks": ["docs/RUNBOOK.md など新規導線を追加したらハブの入力ファイル分類とタスク状態を更新する"],
+  "tests": ["手動: HUB の参照先と docs/birdseye/index.json の node が対応することを確認"],
+  "generated_at": "00001"
+}

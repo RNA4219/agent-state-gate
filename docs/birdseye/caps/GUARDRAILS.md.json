@@ -1,0 +1,11 @@
+{
+  "id": "GUARDRAILS.md",
+  "role": "policy",
+  "public_api": [],
+  "summary": "二重実装禁止、正本尊重、MCP surface 制限、adapter 失敗時既定、Runtime 境界を定義する安全方針。",
+  "deps_out": ["docs/requirements.md", "docs/RUNBOOK.md", "docs/EVALUATION.md", "docs/adapter_contract.md"],
+  "deps_in": ["HUB.codex.md", "README.md", "docs/BIRDSEYE.md"],
+  "risks": ["Production Enforce で KB unavailable のまま high-risk action を allow しない方針を維持する"],
+  "tests": ["手動: 禁止事項に mock / in-memory 本番代替禁止が含まれることを確認"],
+  "generated_at": "00001"
+}

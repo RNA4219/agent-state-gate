@@ -1,0 +1,11 @@
+{
+  "id": "docs/api_spec.md",
+  "role": "api",
+  "public_api": ["context.recall", "gate.evaluate", "context.stale_check", "state_gate.assess", "attention.list", "run.replay_context"],
+  "summary": "MCP surface と error / result schema を定義する API 仕様。",
+  "deps_out": ["docs/requirements.md", "docs/adapter_contract.md"],
+  "deps_in": ["docs/requirements.md", "docs/architecture.md", "HUB.codex.md"],
+  "risks": ["agent-context-mcp を独立 repo 前提に戻すと P0 境界がズレる"],
+  "tests": ["MCP tool schema sample validation", "EvaluateResult schema validation"],
+  "generated_at": "00001"
+}

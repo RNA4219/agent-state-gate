@@ -1,0 +1,11 @@
+{
+  "id": "docs/birdseye/index.json",
+  "role": "index",
+  "public_api": [],
+  "summary": "agent-state-gate Birdseye の node、role、caps path、edge を管理する JSON index。",
+  "deps_out": ["docs/birdseye/hot.json", "docs/birdseye/caps/", "docs/BIRDSEYE.md"],
+  "deps_in": ["docs/BIRDSEYE.md", "HUB.codex.md"],
+  "risks": ["caps 参照切れ", "generated_at と hot.json の不整合"],
+  "tests": ["手動: 全 caps path が存在することを確認"],
+  "generated_at": "00001"
+}

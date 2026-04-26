@@ -1,0 +1,11 @@
+{
+  "id": "docs/PRODUCT_ACCEPTANCE_REFACTOR.md",
+  "role": "acceptance_refactor",
+  "public_api": [],
+  "summary": "プロダクト検収結果、pytest 証跡、P0/P1/P2 リファクタ事項、Production Shadow / Enforce No-Go 理由、推奨実行順、RUNBOOK 連携を管理する台帳。",
+  "deps_out": ["docs/EVALUATION.md", "docs/CHECKLISTS.md", "docs/RUNBOOK.md", "docs/requirements.md"],
+  "deps_in": ["README.md", "HUB.codex.md", "docs/BIRDSEYE.md"],
+  "risks": ["台帳と実テスト結果が乖離すると Product Acceptance 判定が信用できなくなる"],
+  "tests": ["uv run pytest -q", "Birdseye JSON validation", "manual Product Acceptance Gate review"],
+  "generated_at": "00001"
+}

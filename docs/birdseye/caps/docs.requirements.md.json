@@ -1,0 +1,11 @@
+{
+  "id": "docs/requirements.md",
+  "role": "source_of_truth",
+  "public_api": ["context.recall", "gate.evaluate", "context.stale_check", "state_gate.assess", "attention.list"],
+  "summary": "P0 必須機能、MCP surface、adapter 契約、Runtime / Deployment 要件、正本境界、品質基準を定義する正本仕様。RUNBOOK で運用する前提を持つ。",
+  "deps_out": ["docs/architecture.md", "docs/api_spec.md", "docs/adapter_contract.md", "docs/RUNBOOK.md", "docs/EVALUATION.md"],
+  "deps_in": ["README.md", "HUB.codex.md", "BLUEPRINT.md", "deep-research-report (9).md"],
+  "risks": ["Runtime / Deployment 要件が EVALUATION / CHECKLISTS / RUNBOOK とズレると本番移行判定が割れる"],
+  "tests": ["AC-014 Runtime portability", "AC-015 Production runtime readiness"],
+  "generated_at": "00001"
+}

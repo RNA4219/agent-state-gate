@@ -1,0 +1,11 @@
+{
+  "id": "docs/CHECKLISTS.md",
+  "role": "checklist",
+  "public_api": [],
+  "summary": "MVP release、review、P1 / Production Enforce、pre-commit、deployment の確認項目を管理する。",
+  "deps_out": ["docs/RUNBOOK.md", "docs/EVALUATION.md"],
+  "deps_in": ["HUB.codex.md", "BLUEPRINT.md", "docs/EVALUATION.md"],
+  "risks": ["Production runtime checklist が未達のまま blocking に進むこと"],
+  "tests": ["Runtime portability", "Production runtime", "KB unavailable policy"],
+  "generated_at": "00001"
+}
