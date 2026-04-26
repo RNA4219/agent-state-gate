@@ -1,6 +1,6 @@
 [project]
 name = "agent-state-gate"
-version = "0.4.2"
+version = "0.4.4"
 description = "Engineering governance integration layer for Context Graph and State-space Gate harness"
 readme = "README.md"
 requires-python = ">=3.11"

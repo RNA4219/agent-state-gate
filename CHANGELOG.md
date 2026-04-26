@@ -4,6 +4,33 @@ All notable changes to agent-state-gate will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.4.3] - 2026-04-26
+
+### Added - Release Cut Refresh
+
+- `README.md`: 初見向けの説明を整理し、用途、正本境界、MCP surface、クイックスタートを前面化
+- `AGENTS.md`: repo 固有のエージェント向け初動ルールを追加
+- `HUB.codex.md`: エージェント作業の入口として、読み順・正本境界・禁止事項を再整理
+- `docs/birdseye/*`: `AGENTS.md` 追加と説明更新を反映
+
+### Verified
+
+- `agent-state-gate --help` が継続して起動することを確認
+- JSON capsule の構文が通ることを確認
+
+## [0.4.4] - 2026-04-27
+
+### Fixed - DecisionPacket Contract Sync
+
+- `src/core/assessment_engine.py`: `artifact_ref` と top-level `diff_hash` の両方を受け取れるようにし、既存/新規 DecisionPacket 形状の互換性を確保
+- `docs/api_spec.md` / `docs/architecture.md` / `docs/adapter_contract.md`: `revise` と `require_human` を含む実装どおりの verdict 契約へ更新
+- `tests/unit/test_assessment_engine.py`: `diff_hash` 抽出の回帰テストを追加
+
+### Verified
+
+- `uv run pytest -q` が 473 passed
+- `uv run ruff check .` が clean
+
 ## [0.4.2] - 2026-04-26
 
 ### Added - MVP Release Gate Fixes
