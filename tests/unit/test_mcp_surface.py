@@ -5,27 +5,25 @@ Tests context.recall, gate.evaluate, stale_check, state_gate.assess,
 and attention.list APIs.
 """
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
+
 import pytest
 
+from src.adapters import AdapterRegistry
 from src.api.mcp_surface import (
-    MCPSurface,
-    DocRef,
+    AttentionListResult,
     ContractRef,
-    RecallResult,
-    EvidenceRef,
-    ApprovalRef,
+    DocRef,
     EvaluateResult,
-    StaleItem,
+    MCPSurface,
+    RecallResult,
+    ReplayContextResult,
+    SLAStatus,
     StaleCheckResult,
     StateGateAssessResult,
-    SLAStatus,
-    AttentionListResult,
-    ReplayContextResult,
     create_mcp_surface,
 )
 from src.core.verdict_transformer import Verdict
-from src.adapters import AdapterRegistry
 
 
 class TestDocRef:

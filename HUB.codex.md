@@ -29,11 +29,17 @@ next_review_due: 2026-05-26
 | `docs/architecture.md` | アーキテクチャ設計 | 高 |
 | `docs/api_spec.md` | API仕様 | 高 |
 | `docs/adapter_contract.md` | Adapter契約 | 高 |
+| `docs/PRODUCT_ACCEPTANCE_REFACTOR.md` | プロダクト検収・リファクタ台帳 | 高 |
+| `docs/birdseye/index.json` | Birdseye node / edge index | 高 |
+| `docs/birdseye/hot.json` | Birdseye hot list | 高 |
+| `docs/BIRDSEYE.md` | Birdseye フォールバック | 中 |
 
 補完資料:
 
 - `README.md`: リポジトリ概要と参照リンク
 - `CHANGELOG.md`: 完了タスクと履歴の記録
+- `deep-research-report (9).md`: 詳細要件検討ログ。正本反映後は `docs/requirements.md` / `BLUEPRINT.md` / `docs/RUNBOOK.md` を優先する
+- `docs/birdseye/caps/*.json`: 主要ドキュメントの軽量 capsule。詳細は正本ドキュメントへ戻る
 
 更新日: 2026-04-26
 
@@ -51,10 +57,17 @@ BLUEPRINT.md (要件)
     │        └──→ docs/adapter_contract.md (Adapter契約)
     │
     ├──→ docs/EVALUATION.md (受入基準)
+    ├──→ docs/PRODUCT_ACCEPTANCE_REFACTOR.md (検収・リファクタ台帳)
     │
     └──→ docs/RUNBOOK.md (開発フロー)
              │
-             └──→ docs/CHECKLISTS.md (チェックリスト)
+            └──→ docs/CHECKLISTS.md (チェックリスト)
+
+docs/birdseye/index.json (Birdseye)
+    │
+    ├──→ docs/birdseye/hot.json (初動ホットリスト)
+    ├──→ docs/birdseye/caps/*.json (軽量要約)
+    └──→ docs/BIRDSEYE.md (フォールバック)
 
 GUARDRAILS.md (行動指針)
     │
@@ -102,7 +115,10 @@ GUARDRAILS.md (行動指針)
 | docs/adapter_contract.md 作成 | 1d | done |
 | config/gate_config.yaml 作成 | 0.5d | done |
 | pyproject.toml 作成 | 0.25d | done |
-| **Phase 1 Total** | **4.25d** | **done** |
+| docs/RUNBOOK.md 作成 | 0.25d | done |
+| docs/BIRDSEYE.md, docs/birdseye/* 作成 | 0.5d | done |
+| docs/PRODUCT_ACCEPTANCE_REFACTOR.md 作成 | 0.5d | done |
+| **Phase 1 Total** | **6.0d** | **done** |
 
 ### Phase 2: Adapter実装
 
@@ -164,7 +180,7 @@ GUARDRAILS.md (行動指針)
 
 | Phase | Estimate | Buffer (20%) | Total |
 |---|---:|---:|---:|
-| Phase 1 | 4.25d | done | done |
+| Phase 1 | 6.0d | done | done |
 | Phase 2 | 8d | 1.6d | 9.6d |
 | Phase 3 | 5d | 1d | 6d |
 | Phase 4 | 4.5d | 0.9d | 5.4d |
@@ -180,6 +196,9 @@ GUARDRAILS.md (行動指針)
 
 - [x] プロジェクト構造作成
 - [x] README.md, BLUEPRINT.md, HUB.codex.md 作成
+- [x] docs/RUNBOOK.md 作成
+- [x] docs/BIRDSEYE.md, docs/birdseye/* 作成
+- [x] docs/PRODUCT_ACCEPTANCE_REFACTOR.md 作成
 - [x] docs/architecture.md 作成 (Gap解消含む)
 - [x] docs/api_spec.md 作成
 - [x] docs/adapter_contract.md 作成 (Gap解消含む)

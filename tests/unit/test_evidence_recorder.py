@@ -4,13 +4,12 @@ Unit tests for EvidenceRecorder.
 Tests evidence recording, linking, and retrieval.
 """
 
-import pytest
 
 from src.audit.evidence_recorder import (
-    EvidenceRecorder,
     EvidenceItem,
-    EvidenceType,
+    EvidenceRecorder,
     EvidenceStatus,
+    EvidenceType,
     record_evidence,
 )
 
@@ -35,7 +34,6 @@ class TestEvidenceStatus:
 
 class TestEvidenceItem:
     def test_evidence_item_creation(self):
-        from src.common import utc_now
         item = EvidenceItem(
             evidence_id="EV-001",
             evidence_type=EvidenceType.TEST_RESULT,

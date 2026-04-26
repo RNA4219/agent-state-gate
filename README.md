@@ -54,6 +54,10 @@ agent-state-gate/
 - `docs/architecture.md` - アーキテクチャ設計
 - `docs/api_spec.md` - API仕様
 - `docs/adapter_contract.md` - Adapter契約
+- `docs/RUNBOOK.md` - local / CI / staging / production 運用手順
+- `docs/PRODUCT_ACCEPTANCE_REFACTOR.md` - プロダクト検収・リファクタ台帳
+- `docs/birdseye/index.json` - Birdseye 軽量読込 index
+- `docs/BIRDSEYE.md` - Birdseye フォールバック導線
 
 ## MVP (P0) スコープ
 
@@ -66,6 +70,13 @@ agent-state-gate/
 7. Attested context snapshot
 8. Minimal replay
 9. Audit packet v0
+
+## Runtime 方針
+
+- Local / CI: Dockerized pgvector を標準経路、mock / in-memory を contract 検収経路として使用可能
+- Staging / Production: 実 PostgreSQL/pgvector backend を必須とし、mock / in-memory は本番代替にしない
+- Windows ネイティブ pgvector ビルド: 標準導入経路でも本番稼働要件でもない
+- Production Enforce: schema migration、health check、backup、retention、failure_policy 検証後にのみ有効化
 
 ## 開発開始
 
@@ -86,3 +97,7 @@ pytest tests/
 ## Source of Truth
 
 [docs/requirements.md](docs/requirements.md) が正本仕様。
+
+## Birdseye
+
+軽量読込は `docs/birdseye/index.json` → `docs/birdseye/hot.json` → `docs/birdseye/caps/*.json` の順に行う。JSON が読めない場合のみ `docs/BIRDSEYE.md` を参照する。

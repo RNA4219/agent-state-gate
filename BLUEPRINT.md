@@ -95,6 +95,7 @@ Context Graph拡張とState-space Gate統合ハーネスの工程統治統合層
 | **Auth基盤決定済み** | auth provider選定、token validation、role mapping実装完了 | 未指定 |
 | **Tenant境界決定済み** | tenant_id scope、cross-tenant isolation、data residency定義完了 | 未指定 |
 | **Retention policy決定済み** | audit/ops/pii-sensitive retention days、purge mechanism定義完了 | 未指定 |
+| **Production runtime検証済み** | 実 PostgreSQL/pgvector backend、schema migration、health check、backup、retention、failure_policy検証完了 | 未指定 |
 | **Security review approved** | security_reviewer approval取得済み | 未指定 |
 | **Operational KPI達成** | SLA compliance >= 95%, Review load reduction >= 30% | 未指定 |
 | **Shadow mode validation** | Shadow mode >= 30 days, False positive <= 10% | 未指定 |
@@ -103,10 +104,13 @@ Context Graph拡張とState-space Gate統合ハーネスの工程統治統合層
 - Auth provider: OAuth2.0 / SAML / API Key (P0完了後に選定)
 - Tenant境界: single-tenant / multi-tenant (P1完了後に選定)
 - Retention mechanism: TTL-based purge / manual archive (P1完了後に選定)
+- Production runtime: managed PostgreSQL/pgvector または self-hosted PostgreSQL/pgvector (P1完了後に選定)
 
 **重要: Production Enforceは上記entry criteria全項目満たすまでblocking不可**
 - advisory/shadow stageではauth/tenant/retention未指定で動作可能
 - blocking stageに移行する前に、運用安全性判定のために全criteria満たす必要
+- mock / in-memory は local / CI / contract検収専用であり、本番代替として使わない
+- Production Shadow / Production Enforce では `docs/RUNBOOK.md` の runtime checklist を満たすことを entry criteria に含める
 
 ---
 
@@ -116,9 +120,11 @@ Context Graph拡張とState-space Gate統合ハーネスの工程統治統合層
 |---|---|---|---|
 | pass | staleなし、obligation充足、approval充足 | allow | 全条件満たす → allow確定 |
 | pass | required docs/approvalがstale | stale_blocked | stale検出 → stale_blocked確定 (priority最高) |
+| pass | approval欠落のみ | needs_approval | approval_missing → needs_approval |
+| pass | judgment/obligation判断欠落のみ | require_human | obligation_missing かつ human decision required → require_human |
 | pass | evidence不足のみ | needs_approval | evidence_strength < 0.85 → needs_approval |
-| pass | obligation不足のみ | require_human | obligation未充足 → severityに応じrequire_human/deny分岐 |
-| pass | evidence + obligation双方不足 | needs_approval | evidence不足がprimary → needs_approval |
+| pass | obligation不足のみ | severityに応じ分岐 | critical は deny、高 severity は require_human、それ以外は needs_approval |
+| pass | evidence + obligation双方不足 | require_human | judgment欠落が含まれるため require_human を優先 |
 | warn | self-correction可能 | revise | self_correction_count < 2 → revise |
 | warn | 高権限 + uncertainty高 | require_human | permission_level=admin + uncertainty >= 0.15 → require_human |
 | warn | reviewer必須 | require_human | required_role指定あり → require_human |
@@ -258,5 +264,7 @@ def resolve_verdict(
 - 二重実装禁止: agent-gatefieldのscore再計算を原則行わず、DecisionPacketを読み取って統合判断へ変換
 - 正本尊重: 既存資産の責務を奪わない
 - MCP surface制限: remember/relate/invalidate/policy mutate/publish apply は内部API
+- Runtime境界: Windowsネイティブpgvectorビルドを標準経路にせず、本番は実PostgreSQL/pgvector backendを必須にする
+- RUNBOOK連携: runtime / production / rollback / incident triage は `docs/RUNBOOK.md` を正にする
 
 更新日: 2026-04-26

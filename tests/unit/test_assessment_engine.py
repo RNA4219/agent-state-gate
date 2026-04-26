@@ -7,15 +7,15 @@ Reference: AC-002_assessment_assembly.json, architecture.md
 
 
 from src.core import (
+    ApprovalSummary,
     Assessment,
     AssessmentEngine,
     AssessmentStore,
     CausalStep,
     Counterfactual,
-    StaleSummary,
-    ObligationSummary,
-    ApprovalSummary,
     EvidenceSummary,
+    ObligationSummary,
+    StaleSummary,
 )
 from src.core.verdict_transformer import Verdict
 
@@ -281,7 +281,7 @@ class TestAssessmentEngineMethods:
         evidence_result = {"evidence_strength": 1.0}
         context_bundle = {"bundle_id": "01HBND0001"}
 
-        assessment = engine.assemble_assessment(
+        engine.assemble_assessment(
             decision_packet=decision_packet,
             task_data=task_data,
             run_data=run_data,
@@ -413,12 +413,3 @@ class TestAssessment:
 
         assert assessment.created_at is not None
         assert assessment.updated_at is not None
-
-
-# Import summaries for tests
-from src.core.verdict_transformer import (
-    ApprovalSummary,
-    EvidenceSummary,
-    ObligationSummary,
-    StaleSummary,
-)

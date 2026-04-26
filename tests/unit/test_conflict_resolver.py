@@ -6,19 +6,16 @@ Tests conflict detection, resolution strategies, and record management.
 
 from unittest.mock import MagicMock
 
-import pytest
-
+from src.common import utc_now
 from src.core.conflict_resolver import (
+    ConflictRecord,
     ConflictResolver,
     ConflictType,
-    ResolutionStrategy,
-    ConflictRecord,
     ResolutionResult,
+    ResolutionStrategy,
     resolve_assessments,
 )
 from src.core.verdict_transformer import Verdict
-from src.core.assessment_engine import Assessment
-from src.common import utc_now
 
 
 class TestConflictType:
@@ -190,7 +187,7 @@ class TestConflictResolverRecords:
         assessment_b.final_verdict = Verdict.DENY
         assessment_b.assessment_id = "ASM-002"
 
-        conflict = resolver.detect_conflict(assessment_a, assessment_b)
+        resolver.detect_conflict(assessment_a, assessment_b)
         # Conflict should be stored
         conflicts = resolver.list_conflicts()
         assert len(conflicts) >= 1
@@ -332,7 +329,7 @@ class TestConflictResolverTimestamp:
     def test_resolve_by_timestamp_latest_wins(self):
         """Resolve by timestamp - latest wins."""
         resolver = ConflictResolver()
-        from datetime import datetime, timedelta
+        from datetime import timedelta
 
         now = utc_now()
         earlier = now - timedelta(hours=1)

@@ -23,6 +23,7 @@ next_review_due: 2026-05-26
 | AC-007 | Waiver審査プロセス動作 | waiver.request → review → approve/reject |
 | AC-008 | Audit packet生成 | audit_packet_generator.generate() → AuditPacket valid |
 | AC-009 | Replay再現性 >= 99% | run.replay_context() → historical decision match |
+| AC-014 | Runtime portability | Windows native pgvector buildなしでlocal/CI P0 acceptance実行 |
 
 ### P1 Production enforce必須
 
@@ -32,6 +33,7 @@ next_review_due: 2026-05-26
 | AC-011 | Contribution weight計算 | causal_trace sum contribution_weight = 1.0 |
 | AC-012 | Approval binding | diff_hash変更 → 既存approval無効化 |
 | AC-013 | Evidence completeness >= 85% | evidence_summary.evidence_strength >= 0.85 |
+| AC-015 | Production runtime readiness | 実 PostgreSQL/pgvector backend、schema migration、health check、backup、retention、failure_policy検証済み |
 
 ---
 
@@ -80,6 +82,8 @@ next_review_due: 2026-05-26
 | AC-007 | gate_config.yaml waiver.request_flow (lines 104-112) | submit → review → approve/reject sequence | gate_config.yaml:104-112 |
 | AC-008 | architecture.md AuditPacket structure (lines 295-322) | trace_id/span_id valid, retention_class valid | architecture.md:295-322 |
 | AC-009 | architecture.md Replay logic (pending) | historical decision match >= 99% | architecture.md:replay_engine |
+| AC-014 | docs/RUNBOOK.md Runtime方針 | local/CIがWindows native buildなしで通る | docs/RUNBOOK.md:2 |
+| AC-015 | docs/RUNBOOK.md Staging / Production手順 | production runtime readinessが全項目PASS | docs/RUNBOOK.md:5 |
 
 ### 3.2 Observable Expected Results
 
@@ -215,6 +219,7 @@ gate.evaluate(task_id, action, capabilities)
 | Quality metrics全項目達成 | Yes | metrics dashboard |
 | Shadow mode >= 14 days | Yes | shadow log analysis |
 | False escalation <= 15% | Yes | escalation audit |
+| Production runtime readiness | Yes | PostgreSQL/pgvector health, migration, backup, retention evidence |
 | Security review approved | Yes | security_reviewer approval |
 
 ---

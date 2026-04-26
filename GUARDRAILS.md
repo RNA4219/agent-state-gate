@@ -72,7 +72,14 @@ critical static fail
 | shipyard-cp | hold 不能なら high-risk は deny |
 | agent-gatefield | unavailable なら high-risk は require_human、publish は deny |
 
-## 8. 出力契約
+## 8. Runtime境界
+
+- Windows ネイティブ pgvector ビルドを標準導入経路にしない
+- Local / CI は Dockerized pgvector を標準、mock / in-memory を契約検収専用とする
+- Production Shadow / Production Enforce は実 PostgreSQL/pgvector backend を必須にする
+- Production Enforce で KB unavailable のまま high-risk action を allow しない
+
+## 9. 出力契約
 
 ### plan 出力形式
 - node_id と role を明示（Birdseye 連携）
@@ -98,17 +105,18 @@ critical static fail
 }
 ```
 
-## 9. 開発フロー
+## 10. 開発フロー
 
 - タスクは独立性が保てる粒度まで分割
 - 変更は小さく・短時間で終わるブランチ
 - 早めの rebase で最新に追従
 - リスクがある場合は Task Seeds に記載
 
-## 10. 禁止事項
+## 11. 禁止事項
 
 - 既存repoの責務を奪う実装
 - MCP から dangerous mutation を直接公開
 - Approval を diff 変更後に再利用
 - Override/Waiver の常態化
 - Raw prompt/payload の外部保存
+- mock / in-memory を本番代替として扱うこと

@@ -981,7 +981,7 @@ class TestQueueAdditionalMethods:
             verdict_reason="test",
         )
 
-        item = queue.add_item(
+        queue.add_item(
             assessment=assessment,
             reason_code=ReasonCode.APPROVAL_MISSING,
             severity=Severity.MEDIUM,

@@ -5,8 +5,8 @@ Tests GatefieldAdapter, TaskstateAdapter, ProtocolsAdapter,
 MemxAdapter, ShipyardAdapter, WorkflowAdapter, and AdapterRegistry.
 """
 
-from unittest.mock import MagicMock, patch
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -14,6 +14,7 @@ from src.adapters.base import (
     EvidenceNotFoundError,
     FailurePolicy,
     OperationMode,
+    SchemaValidationError,
 )
 from src.adapters.gatefield_adapter import GatefieldAdapter, GatefieldConfig
 from src.adapters.memx_adapter import MemxAdapter, MemxConfig
@@ -336,7 +337,7 @@ class TestWorkflowAdapterMetadata:
         assert metadata.operation_mode == OperationMode.READ_ONLY
 
 
-class TestWorkflowAdapterEvidence:
+class TestWorkflowAdapterEvidenceWithCookbookPath:
     def test_get_evidence_report_raises_when_not_found(self):
         adapter = WorkflowAdapter()
         # Raises EvidenceNotFoundError when evidence file doesn't exist
@@ -748,7 +749,7 @@ class TestProtocolsAdapterDeriveApprovals:
 
     def test_derive_required_approvals_unknown_level_raises(self):
         adapter = ProtocolsAdapter()
-        with pytest.raises(Exception):  # SchemaValidationError
+        with pytest.raises(SchemaValidationError):
             adapter.derive_required_approvals("unknown_level")
 
     def test_is_auto_approved_medium(self):
@@ -768,12 +769,12 @@ class TestProtocolsAdapterDeriveApprovals:
 
     def test_resolve_definition_of_done_missing(self):
         adapter = ProtocolsAdapter()
-        with pytest.raises(Exception):  # SchemaValidationError
+        with pytest.raises(SchemaValidationError):
             adapter.resolve_definition_of_done("UnknownContract")
 
     def test_resolve_publish_requirements_missing(self):
         adapter = ProtocolsAdapter()
-        with pytest.raises(Exception):  # SchemaValidationError
+        with pytest.raises(SchemaValidationError):
             adapter.resolve_publish_requirements("unknown_target")
 
 
@@ -854,10 +855,10 @@ class TestWorkflowAdapterAdditional:
     def test_get_birdseye_caps_json_decode_error(self):
         """Get birdseye caps handles JSON decode error."""
         adapter = WorkflowAdapter()
-        from src.adapters.base import AdapterUnavailableError
-        import tempfile
         import os
-        import json
+        import tempfile
+
+        from src.adapters.base import AdapterUnavailableError
         with tempfile.TemporaryDirectory() as tmpdir:
             repo_path = tmpdir
             birdseye_dir = os.path.join(repo_path, "birdseye")
@@ -873,10 +874,11 @@ class TestWorkflowAdapterAdditional:
     def test_get_birdseye_caps_success(self):
         """Get birdseye caps reads valid JSON."""
         adapter = WorkflowAdapter()
-        from src.adapters.base import AdapterUnavailableError
-        import tempfile
-        import os
         import json
+        import os
+        import tempfile
+
+        from src.adapters.base import AdapterUnavailableError
         with tempfile.TemporaryDirectory() as tmpdir:
             repo_path = tmpdir
             birdseye_dir = os.path.join(repo_path, "birdseye")
@@ -891,8 +893,8 @@ class TestWorkflowAdapterAdditional:
     def test_get_acceptance_index_with_files(self):
         """Get acceptance index scans acceptance files."""
         adapter = WorkflowAdapter()
-        import tempfile
         import os
+        import tempfile
         with tempfile.TemporaryDirectory() as tmpdir:
             acceptance_dir = os.path.join(tmpdir, "docs", "acceptance")
             os.makedirs(acceptance_dir)
@@ -906,8 +908,8 @@ class TestWorkflowAdapterAdditional:
     def test_get_governance_policy_yaml_error(self):
         """Get governance policy handles YAML decode error."""
         adapter = WorkflowAdapter()
-        import tempfile
         import os
+        import tempfile
         with tempfile.TemporaryDirectory() as tmpdir:
             governance_dir = os.path.join(tmpdir, "governance")
             os.makedirs(governance_dir)
@@ -922,8 +924,9 @@ class TestWorkflowAdapterAdditional:
     def test_get_governance_policy_with_default_file(self):
         """Get governance policy reads default policy.yaml."""
         adapter = WorkflowAdapter()
-        import tempfile
         import os
+        import tempfile
+
         import yaml
         with tempfile.TemporaryDirectory() as tmpdir:
             governance_dir = os.path.join(tmpdir, "governance")
@@ -938,10 +941,11 @@ class TestWorkflowAdapterAdditional:
     def test_get_evidence_report_from_file(self):
         """Get evidence report reads from fallback file."""
         adapter = WorkflowAdapter()
-        from src.adapters.base import AdapterUnavailableError
-        import tempfile
-        import os
         import json
+        import os
+        import tempfile
+
+        from src.adapters.base import AdapterUnavailableError
         with tempfile.TemporaryDirectory() as tmpdir:
             cache_dir = os.path.join(tmpdir, ".workflow-cache")
             os.makedirs(cache_dir)
@@ -962,9 +966,10 @@ class TestWorkflowAdapterAdditional:
     def test_get_evidence_report_json_decode_error(self):
         """Get evidence report handles JSON decode error in fallback."""
         adapter = WorkflowAdapter()
-        from src.adapters.base import AdapterUnavailableError, EvidenceNotFoundError
-        import tempfile
         import os
+        import tempfile
+
+        from src.adapters.base import AdapterUnavailableError, EvidenceNotFoundError
         with tempfile.TemporaryDirectory() as tmpdir:
             cache_dir = os.path.join(tmpdir, ".workflow-cache")
             os.makedirs(cache_dir)
@@ -979,10 +984,11 @@ class TestWorkflowAdapterAdditional:
     def test_get_codemap_from_file(self):
         """Get codemap reads from fallback file."""
         adapter = WorkflowAdapter()
-        from src.adapters.base import AdapterUnavailableError
-        import tempfile
-        import os
         import json
+        import os
+        import tempfile
+
+        from src.adapters.base import AdapterUnavailableError
         with tempfile.TemporaryDirectory() as tmpdir:
             codemap_dir = os.path.join(tmpdir, "codemap")
             os.makedirs(codemap_dir)
@@ -998,9 +1004,10 @@ class TestWorkflowAdapterAdditional:
     def test_get_codemap_json_decode_error(self):
         """Get codemap handles JSON decode error in fallback."""
         adapter = WorkflowAdapter()
-        from src.adapters.base import AdapterUnavailableError
-        import tempfile
         import os
+        import tempfile
+
+        from src.adapters.base import AdapterUnavailableError
         with tempfile.TemporaryDirectory() as tmpdir:
             codemap_dir = os.path.join(tmpdir, "codemap")
             os.makedirs(codemap_dir)
@@ -1127,8 +1134,9 @@ class TestTaskstateAdapterMethods:
     def test_run_cli_timeout(self):
         """_run_cli raises on timeout."""
         adapter = TaskstateAdapter()
-        from src.adapters.base import AdapterUnavailableError
         import subprocess
+
+        from src.adapters.base import AdapterUnavailableError
         with patch("subprocess.run") as mock_run:
             mock_run.side_effect = subprocess.TimeoutExpired("cmd", 30)
             with pytest.raises(AdapterUnavailableError):
@@ -1189,7 +1197,7 @@ class TestMemxAdapterCLIResolveDocs:
             "required_docs": [],
             "recommended_docs": []
         })
-        result = adapter.resolve_docs("TASK-001", "edit_repo", touched_paths=["src/auth.py"])
+        adapter.resolve_docs("TASK-001", "edit_repo", touched_paths=["src/auth.py"])
         assert adapter._cli_call.called
 
 
@@ -1213,7 +1221,7 @@ class TestMemxAdapterCLIAckReads:
     def test_ack_reads_cli_raises_ack_failed(self):
         """Ack reads via CLI raises AckFailedError on failure."""
         adapter = MemxAdapter({"cli_path": "/usr/bin/memx", "use_http": False})
-        from src.adapters.base import AdapterUnavailableError, AckFailedError
+        from src.adapters.base import AckFailedError, AdapterUnavailableError
         adapter._cli_call = MagicMock(side_effect=AdapterUnavailableError("memx", "error"))
         with pytest.raises(AckFailedError):
             adapter.ack_reads("TASK-001", "DOC-001", "v1", ["chunk-1"])
@@ -1272,8 +1280,9 @@ class TestMemxAdapterCliCall:
     def test_cli_call_timeout_raises(self):
         """CLI call raises on timeout."""
         adapter = MemxAdapter({"cli_path": "/usr/bin/memx", "use_http": False})
-        from src.adapters.base import AdapterUnavailableError
         import subprocess
+
+        from src.adapters.base import AdapterUnavailableError
         with patch("subprocess.run") as mock_run:
             mock_run.side_effect = subprocess.TimeoutExpired("cmd", 30)
             with pytest.raises(AdapterUnavailableError):
@@ -1336,8 +1345,9 @@ class TestMemxAdapterHttpCall:
     def test_http_call_timeout_raises_unavailable(self):
         """HTTP timeout raises AdapterUnavailableError."""
         adapter = MemxAdapter({"base_url": "http://localhost:8000"})
-        from src.adapters.base import AdapterUnavailableError
         import requests
+
+        from src.adapters.base import AdapterUnavailableError
         with patch.object(adapter._session, "get") as mock_get:
             mock_get.side_effect = requests.Timeout()
             with pytest.raises(AdapterUnavailableError):
@@ -1346,8 +1356,9 @@ class TestMemxAdapterHttpCall:
     def test_http_call_connection_error_raises_unavailable(self):
         """HTTP connection error raises AdapterUnavailableError."""
         adapter = MemxAdapter({"base_url": "http://localhost:8000"})
-        from src.adapters.base import AdapterUnavailableError
         import requests
+
+        from src.adapters.base import AdapterUnavailableError
         with patch.object(adapter._session, "get") as mock_get:
             mock_get.side_effect = requests.ConnectionError()
             with pytest.raises(AdapterUnavailableError):
@@ -1378,7 +1389,7 @@ class TestMemxAdapterNoSession:
     def test_ack_reads_no_session_no_cli(self):
         """Ack reads raises when no session or CLI."""
         adapter = MemxAdapter({"use_http": False})
-        from src.adapters.base import AdapterUnavailableError, AckFailedError
+        from src.adapters.base import AckFailedError
         with pytest.raises(AckFailedError):
             adapter.ack_reads("TASK-001", "DOC-001", "v1", ["chunk-1"])
 
@@ -1502,9 +1513,9 @@ class TestProtocolsAdapterAdditional:
     def test_resolve_definition_of_done_with_schema(self):
         """Resolve definition of done reads schema file."""
         adapter = ProtocolsAdapter()
-        import tempfile
-        import os
         import json
+        import os
+        import tempfile
         with tempfile.TemporaryDirectory() as tmpdir:
             schema_dir = os.path.join(tmpdir, "contract_types")
             os.makedirs(schema_dir)
@@ -1518,8 +1529,8 @@ class TestProtocolsAdapterAdditional:
     def test_resolve_definition_of_done_json_error(self):
         """Resolve definition of done handles JSON decode error."""
         adapter = ProtocolsAdapter()
-        import tempfile
         import os
+        import tempfile
         with tempfile.TemporaryDirectory() as tmpdir:
             schema_dir = os.path.join(tmpdir, "contract_types")
             os.makedirs(schema_dir)
@@ -1534,9 +1545,9 @@ class TestProtocolsAdapterAdditional:
     def test_resolve_publish_requirements_with_schema(self):
         """Resolve publish requirements reads schema file."""
         adapter = ProtocolsAdapter()
-        import tempfile
-        import os
         import json
+        import os
+        import tempfile
         with tempfile.TemporaryDirectory() as tmpdir:
             schema_dir = os.path.join(tmpdir, "publish_gates")
             os.makedirs(schema_dir)
@@ -1550,8 +1561,8 @@ class TestProtocolsAdapterAdditional:
     def test_resolve_publish_requirements_json_error(self):
         """Resolve publish requirements handles JSON decode error."""
         adapter = ProtocolsAdapter()
-        import tempfile
         import os
+        import tempfile
         with tempfile.TemporaryDirectory() as tmpdir:
             schema_dir = os.path.join(tmpdir, "publish_gates")
             os.makedirs(schema_dir)
@@ -1566,9 +1577,9 @@ class TestProtocolsAdapterAdditional:
     def test_validate_contract_success(self):
         """Validate contract passes when all required fields present."""
         adapter = ProtocolsAdapter()
-        import tempfile
-        import os
         import json
+        import os
+        import tempfile
         with tempfile.TemporaryDirectory() as tmpdir:
             schema_dir = os.path.join(tmpdir, "contract_types")
             os.makedirs(schema_dir)
@@ -1582,8 +1593,9 @@ class TestProtocolsAdapterAdditional:
     def test_get_risk_levels_schema_with_file(self):
         """Get risk levels schema reads YAML file."""
         adapter = ProtocolsAdapter()
-        import tempfile
         import os
+        import tempfile
+
         import yaml
         with tempfile.TemporaryDirectory() as tmpdir:
             schema_file = os.path.join(tmpdir, "risk_levels.yaml")
@@ -1596,8 +1608,8 @@ class TestProtocolsAdapterAdditional:
     def test_get_risk_levels_schema_yaml_error(self):
         """Get risk levels schema handles YAML decode error."""
         adapter = ProtocolsAdapter()
-        import tempfile
         import os
+        import tempfile
         with tempfile.TemporaryDirectory() as tmpdir:
             schema_file = os.path.join(tmpdir, "risk_levels.yaml")
             with open(schema_file, "w") as f:
@@ -1609,8 +1621,9 @@ class TestProtocolsAdapterAdditional:
     def test_get_approval_matrix_schema_with_file(self):
         """Get approval matrix schema reads YAML file."""
         adapter = ProtocolsAdapter()
-        import tempfile
         import os
+        import tempfile
+
         import yaml
         with tempfile.TemporaryDirectory() as tmpdir:
             schema_file = os.path.join(tmpdir, "approval_matrix.yaml")
@@ -1623,8 +1636,8 @@ class TestProtocolsAdapterAdditional:
     def test_get_approval_matrix_schema_yaml_error(self):
         """Get approval matrix schema handles YAML decode error."""
         adapter = ProtocolsAdapter()
-        import tempfile
         import os
+        import tempfile
         with tempfile.TemporaryDirectory() as tmpdir:
             schema_file = os.path.join(tmpdir, "approval_matrix.yaml")
             with open(schema_file, "w") as f:
@@ -1721,7 +1734,6 @@ class TestShipyardAdapterAdditional:
     def test_resume_from_review_transition_not_allowed(self):
         """Resume from review returns False on TransitionNotAllowed."""
         adapter = ShipyardAdapter({"base_url": "http://localhost:3000"})
-        from src.adapters.base import TransitionNotAllowedError
         with patch.object(adapter._session, "post") as mock_post:
             mock_post.return_value = MagicMock(
                 status_code=409,
@@ -1799,8 +1811,9 @@ class TestShipyardAdapterAdditional:
     def test_http_call_timeout_raises(self):
         """HTTP call timeout raises AdapterUnavailableError."""
         adapter = ShipyardAdapter({"base_url": "http://localhost:3000"})
-        from src.adapters.base import AdapterUnavailableError
         import requests
+
+        from src.adapters.base import AdapterUnavailableError
         with patch.object(adapter._session, "get") as mock_get:
             mock_get.side_effect = requests.Timeout()
             with pytest.raises(AdapterUnavailableError):
@@ -1809,8 +1822,9 @@ class TestShipyardAdapterAdditional:
     def test_http_call_connection_error_raises(self):
         """HTTP call connection error raises AdapterUnavailableError."""
         adapter = ShipyardAdapter({"base_url": "http://localhost:3000"})
-        from src.adapters.base import AdapterUnavailableError
         import requests
+
+        from src.adapters.base import AdapterUnavailableError
         with patch.object(adapter._session, "get") as mock_get:
             mock_get.side_effect = requests.ConnectionError()
             with pytest.raises(AdapterUnavailableError):
@@ -1904,8 +1918,9 @@ class TestGatefieldAdapterAdditional:
     def test_evaluate_timeout_raises(self):
         """Evaluate timeout raises AdapterUnavailableError."""
         adapter = GatefieldAdapter({"base_url": "http://localhost:8080"})
-        from src.adapters.base import AdapterUnavailableError
         import requests
+
+        from src.adapters.base import AdapterUnavailableError
         with patch.object(adapter._session, "post") as mock_post:
             mock_post.side_effect = requests.Timeout()
             with pytest.raises(AdapterUnavailableError):
@@ -1914,8 +1929,9 @@ class TestGatefieldAdapterAdditional:
     def test_evaluate_connection_error_raises(self):
         """Evaluate connection error raises AdapterUnavailableError."""
         adapter = GatefieldAdapter({"base_url": "http://localhost:8080"})
-        from src.adapters.base import AdapterUnavailableError
         import requests
+
+        from src.adapters.base import AdapterUnavailableError
         with patch.object(adapter._session, "post") as mock_post:
             mock_post.side_effect = requests.ConnectionError()
             with pytest.raises(AdapterUnavailableError):
@@ -1933,8 +1949,9 @@ class TestGatefieldAdapterAdditional:
     def test_enqueue_review_timeout_raises(self):
         """Enqueue review timeout raises AdapterUnavailableError."""
         adapter = GatefieldAdapter({"base_url": "http://localhost:8080"})
-        from src.adapters.base import AdapterUnavailableError
         import requests
+
+        from src.adapters.base import AdapterUnavailableError
         with patch.object(adapter._session, "post") as mock_post:
             mock_post.side_effect = requests.Timeout()
             with pytest.raises(AdapterUnavailableError):
@@ -1952,8 +1969,9 @@ class TestGatefieldAdapterAdditional:
     def test_export_audit_timeout_raises(self):
         """Export audit timeout raises AdapterUnavailableError."""
         adapter = GatefieldAdapter({"base_url": "http://localhost:8080"})
-        from src.adapters.base import AdapterUnavailableError
         import requests
+
+        from src.adapters.base import AdapterUnavailableError
         with patch.object(adapter._session, "get") as mock_get:
             mock_get.side_effect = requests.Timeout()
             with pytest.raises(AdapterUnavailableError):
@@ -1991,8 +2009,9 @@ class TestGatefieldAdapterAdditional:
     def test_get_state_vector_timeout_raises(self):
         """Get state vector timeout raises AdapterUnavailableError."""
         adapter = GatefieldAdapter({"base_url": "http://localhost:8080"})
-        from src.adapters.base import AdapterUnavailableError
         import requests
+
+        from src.adapters.base import AdapterUnavailableError
         with patch.object(adapter._session, "get") as mock_get:
             mock_get.side_effect = requests.Timeout()
             with pytest.raises(AdapterUnavailableError):
