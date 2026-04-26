@@ -484,10 +484,10 @@ flowchart LR
 
 | 種別 | 条件 | 既定アクション |
 |---|---|---|
-| Hard | secret 混入、forbidden command/path、critical SAST、forbidden capability | block |
+| Hard | secret 混入、forbidden command/path、critical SAST、forbidden capability | deny |
 | Hard | stale required docs、approval stale、acceptance stale | stale_blocked |
 | Hard | obligation 未充足、publish evidence 不足、non-goal 重大侵害 | require_human。critical obligation 未充足かつ waiver 不可なら deny |
-| Hard | taboo critical、authority hierarchy 逆転、untrusted context による policy override | block |
+| Hard | taboo critical、authority hierarchy 逆転、untrusted context による policy override | deny |
 | Soft | recommended doc unread、evidence weak、flaky test 由来 | warn |
 | Soft | drift 中程度、accepted-case support 低、uncertainty 高 | revise または require_human |
 | Soft | anomaly 軽微、cost/latency budget 逼迫 | warn |
@@ -497,7 +497,7 @@ flowchart LR
 最終判定の優先順位は次を推奨します。
 
 `critical static fail`  
-> `taboo block / secret / compliance block`  
+> `taboo / secret / compliance deny`  
 > `approval or stale hard block`  
 > `require_human`  
 > `revise`  
