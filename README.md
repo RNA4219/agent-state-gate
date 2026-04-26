@@ -1,103 +1,135 @@
 # agent-state-gate
 
-工程統治統合層 - Context Graph拡張とState-space Gate統合ハーネス
+`agent-state-gate` は、エージェントの作業を「進めてよいか」「人間の確認が必要か」「止めるべきか」に変換する統合 gate 層です。
 
-## 概要
+単体で新しい判定エンジンを作る repo ではありません。`agent-gatefield` の State-space Gate 判定、`agent-taskstate` の task/run/context、`memx-resolver` の stale 判定、`agent-protocols` の approval 契約、`workflow-cookbook` の Evidence を束ね、最終 verdict と監査証跡を作ります。
 
-本プロジェクトは既存6資産を横断する統合工程統治層として実装：
+## 何に使うか
 
-- `workflow-cookbook`: Birdseye/Codemap、Acceptance、Evidence
-- `memx-resolver`: docs resolve、stale、contract
-- `agent-taskstate`: task/state/decision/context_bundle/run
-- `agent-protocols`: 契約、approval rules
-- `shipyard-cp`: orchestration、publish gate
-- `agent-gatefield`: State-space Gate判定エンジン
+- エージェント作業の実行前に、必要な文書・承認・証跡が揃っているか確認する
+- `pass / warn / hold / block` の判定を、運用で使える `allow / revise / needs_approval / require_human / stale_blocked / deny` に変換する
+- 人間が見るべき例外だけを Human Attention Queue に積む
+- approval を `diff_hash` と `context_hash` に束縛し、古い承認の再利用を防ぐ
+- 後から再現できる audit packet と evidence summary を残す
 
-## 主責務
+## 位置づけ
 
-1. DecisionPacket ingestion: `agent-gatefield` の判定結果を受け取る
-2. Assessment assembly: 判定 + obligation + stale + approval + evidence を束ねる
-3. Verdict transformation: pass/warn/hold/block → allow/needs_approval/stale_blocked/deny
-4. Human Attention Queue: 人間レビューキューの管理
-5. Approval binding/freshness: diff/context hash による承認束縛
-6. Evidence summary: 証跡の集約と参照
+| Repo | 役割 | agent-state-gate から見た扱い |
+|---|---|---|
+| `agent-gatefield` | State-space Gate 判定エンジン | DecisionPacket の正本 |
+| `agent-taskstate` | Task / Run / ContextBundle | task state の正本 |
+| `memx-resolver` | docs resolve / stale check | 文書鮮度の正本 |
+| `agent-protocols` | approval / risk 契約 | 承認要件の正本 |
+| `workflow-cookbook` | Evidence / Acceptance | 証跡の正本 |
+| `shipyard-cp` | orchestration / publish gate | 実行段階と hold の接続先 |
 
-## MCP Surface (agent-context-mcp)
+この repo が持つ正本は `Assessment`、`HumanQueueItem`、`AuditPacket` です。
 
-本プロジェクト内の `src/api/mcp_surface.py` として実装：
+## 主要機能
 
-- `context.recall`: task/action起点の文書解決
-- `gate.evaluate`: 統合gate評価
-- `context.stale_check`: stale判定
-- `state_gate.assess`: State-space gate評価
-- `attention.list`: Human Attention Queue一覧
+- DecisionPacket ingestion
+- Assessment assembly
+- Verdict transformation
+- Human Attention Queue
+- Approval binding / freshness check
+- Evidence summary
+- Attested context snapshot
+- Minimal replay
+- Audit packet v0
+- MCP surface facade
 
-## 構成
+## MCP Surface
 
-```
-agent-state-gate/
-├── src/
-│   ├── core/           # Assessment engine, verdict transformer
-│   ├── adapters/       # 既存資産接続adapter
-│   ├── queue/          # Human Attention Queue
-│   ├── audit/          # Audit packet生成
-│   ├── api/            # MCP façade
-│   └── config/         # 設定ファイル
-├── docs/               # 設計ドキュメント
-├── tests/              # テストスイート
-└── pyproject.toml
-```
+MCP facade は `src/api/mcp_surface.py` にあります。
 
-## 参照ドキュメント
+| Tool | 用途 |
+|---|---|
+| `context.recall` | task/action 起点で必要文書と context bundle を解決する |
+| `gate.evaluate` | 統合 gate を評価し、最終 verdict を返す |
+| `context.stale_check` | stale 判定を実行する |
+| `state_gate.assess` | State-space Gate 評価を統合層から呼ぶ |
+| `attention.list` | Human Attention Queue を一覧する |
+| `run.replay_context` | 過去 run の replay 用 context を扱う |
 
-- `docs/requirements.md` - 要件定義書（詳細）
-- `docs/architecture.md` - アーキテクチャ設計
-- `docs/api_spec.md` - API仕様
-- `docs/adapter_contract.md` - Adapter契約
-- `docs/RUNBOOK.md` - local / CI / staging / production 運用手順
-- `docs/PRODUCT_ACCEPTANCE_REFACTOR.md` - プロダクト検収・リファクタ台帳
-- `docs/birdseye/index.json` - Birdseye 軽量読込 index
-- `docs/BIRDSEYE.md` - Birdseye フォールバック導線
+## いまの実装状態
 
-## MVP (P0) スコープ
+v0.4.3 時点では、core / adapters / queue / audit / MCP facade / CLI の MVP 実装と unit tests が入っています。
 
-1. DecisionPacket ingestion
-2. Assessment assembly
-3. Verdict transformation
-4. Human Attention Queue
-5. Approval binding/freshness
-6. Evidence.record
-7. Attested context snapshot
-8. Minimal replay
-9. Audit packet v0
+注意点:
 
-## Runtime 方針
+- `gate evaluate` は adapter 接続がない場合、advisory mode の結果を返します。
+- production blocking mode には、実 `agent-gatefield` DecisionPacket 連携と PostgreSQL/pgvector backend の検証が必要です。
+- mock / in-memory は contract test とローカル開発用です。本番代替にはしません。
 
-- Local / CI: Dockerized pgvector を標準経路、mock / in-memory を contract 検収経路として使用可能
-- Staging / Production: 実 PostgreSQL/pgvector backend を必須とし、mock / in-memory は本番代替にしない
-- Windows ネイティブ pgvector ビルド: 標準導入経路でも本番稼働要件でもない
-- Production Enforce: schema migration、health check、backup、retention、failure_policy 検証後にのみ有効化
-
-## 開発開始
+## クイックスタート
 
 ```bash
 pip install -e .
+agent-state-gate --help
+agent-state-gate gate evaluate --task TASK-1 --run RUN-1 --output json
 pytest tests/
 ```
 
-## 関連リポジトリ
+`uv` を使う場合:
 
-- [agent-gatefield](../agent-gatefield) - State-space Gate判定エンジン
-- [agent-taskstate](../agent-taskstate) - 状態正本化
-- [agent-protocols](../agent-protocols) - 契約システム
-- [shipyard-cp](../shipyard-cp) - Orchestration制御面
-- [memx-resolver](../memx-resolver) - 文書resolver
-- [workflow-cookbook](../workflow-cookbook) - Evidence/Acceptance
+```bash
+uv run agent-state-gate --help
+uv run pytest
+uv run ruff check .
+```
 
-## Source of Truth
+## ディレクトリ構成
 
-[docs/requirements.md](docs/requirements.md) が正本仕様。
+```text
+agent-state-gate/
+├── src/
+│   ├── core/       # Assessment engine, verdict transformer, conflict resolver
+│   ├── adapters/   # 既存 repo との接続 adapter
+│   ├── queue/      # Human Attention Queue
+│   ├── audit/      # Audit packet と Evidence recorder
+│   ├── api/        # MCP facade
+│   └── common.py   # 共通 utility
+├── config/         # gate 設定
+├── docs/           # 仕様、運用、検収、Birdseye
+├── tests/          # unit tests と golden fixtures
+└── pyproject.toml
+```
 
-## Birdseye
+## 最初に読むもの
 
-軽量読込は `docs/birdseye/index.json` → `docs/birdseye/hot.json` → `docs/birdseye/caps/*.json` の順に行う。JSON が読めない場合のみ `docs/BIRDSEYE.md` を参照する。
+人間が概要を掴むなら、この順で読んでください。
+
+1. `README.md`
+2. `docs/requirements.md`
+3. `docs/RUNBOOK.md`
+4. `docs/EVALUATION.md`
+
+エージェントが作業に入るなら、この順です。
+
+1. `AGENTS.md`
+2. `HUB.codex.md`
+3. `docs/birdseye/index.json`
+4. `docs/birdseye/hot.json`
+5. 変更対象に近い `docs/birdseye/caps/*.json`
+
+## 正本ドキュメント
+
+- `docs/requirements.md`: 要件定義の正本
+- `docs/architecture.md`: アーキテクチャ
+- `docs/api_spec.md`: API 仕様
+- `docs/adapter_contract.md`: adapter 契約
+- `docs/RUNBOOK.md`: local / CI / staging / production 運用
+- `docs/EVALUATION.md`: 受入基準
+- `docs/PRODUCT_ACCEPTANCE_REFACTOR.md`: 検収・リファクタ台帳
+- `GUARDRAILS.md`: 守るべき境界と禁止事項
+- `HUB.codex.md`: エージェント向けナビゲーション
+
+## 変更時の基本ルール
+
+- `agent-gatefield` の score や state vector を再計算しない
+- 他 repo の正本データをこの repo に移さない
+- MCP surface から危険な mutation を直接公開しない
+- approval は現在の `diff_hash` と `context_hash` にだけ有効とする
+- production enforce では mock / in-memory を使わない
+
+詳細は `GUARDRAILS.md` を参照してください。

@@ -89,7 +89,7 @@ def gate_evaluate(
 ```python
 @dataclass
 class EvaluateResult:
-    verdict: Verdict  # allow | needs_approval | stale_blocked | deny
+    verdict: Verdict  # allow | revise | needs_approval | require_human | stale_blocked | deny
     required_evidence: List[EvidenceRef]
     required_approvals: List[ApprovalRef]
     missing_approvals: List[str]
@@ -101,7 +101,9 @@ class EvaluateResult:
 | Return | Condition |
 |---|---|
 | `allow` | All conditions met, no stale, no blockers |
+| `revise` | Self-correction is recommended before continuing |
 | `needs_approval` | Missing approval or evidence |
+| `require_human` | Human judgment is required for risk or uncertainty |
 | `stale_blocked` | Required docs or approval stale |
 | `deny` | Hard block condition |
 

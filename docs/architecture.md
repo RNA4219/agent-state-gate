@@ -191,7 +191,7 @@ class Assessment:
     approval_summary: ApprovalSummary
     evidence_summary: EvidenceSummary
     
-    final_verdict: Verdict           # allow | needs_approval | stale_blocked | deny
+    final_verdict: Verdict           # allow | revise | needs_approval | require_human | stale_blocked | deny
     causal_trace: List[CausalStep]   # 判断根拠の連鎖
     counterfactuals: List[Counterfactual]  # 代替条件
     

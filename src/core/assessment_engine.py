@@ -303,7 +303,7 @@ class AssessmentEngine:
             counterfactuals=counterfactuals,
             threshold_version=threshold_version or decision_packet.get("threshold_version", ""),
             context_hash=context_hash,
-            diff_hash=decision_packet.get("artifact_ref", {}).get("diff_hash", ""),
+            diff_hash=self._extract_diff_hash(decision_packet),
         )
 
         # Save to store
@@ -510,6 +510,13 @@ class AssessmentEngine:
             "evidence_strength": evidence_result.get("evidence_strength"),
         }
         return hash_dict(context_data)
+
+    def _extract_diff_hash(self, decision_packet: dict) -> str:
+        """Extract diff hash from current or legacy DecisionPacket shapes."""
+        artifact_ref = decision_packet.get("artifact_ref")
+        if isinstance(artifact_ref, dict) and artifact_ref.get("diff_hash"):
+            return artifact_ref["diff_hash"]
+        return decision_packet.get("diff_hash", "")
 
     def _extract_rule_id(self, decision_packet: dict) -> str:
         """Extract primary rule ID from DecisionPacket."""

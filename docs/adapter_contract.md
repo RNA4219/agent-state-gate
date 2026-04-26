@@ -127,6 +127,8 @@ gatefield_adapterのDecisionPacketはagent-gatefield DATA_TYPES_SPEC完全版に
 | `action` | ActionRecommendation | Recommended action |
 | `threshold_version` | string sha256 hash | Threshold config hash for reproducibility |
 | `policy_version` | string | Policy version identifier |
+| `artifact_ref` | object | Artifact URI plus `diff_hash` for approval binding |
+| `diff_hash` | string | Top-level mirror for adapter compatibility |
 | `static_gate_summary` | StaticGateSummary | Summary of static gate results |
 | `created_at` | datetime RFC3339 | Decision timestamp |
 

@@ -153,6 +153,55 @@ class TestAssessmentEngine:
         assert assessment.final_verdict == Verdict.ALLOW
         assert assessment.task_id == "agent-taskstate:task:local:01HTSK0001"
 
+    def test_assemble_extracts_diff_hash_from_decision_packet_artifact_ref(self):
+        """DecisionPacket artifact_ref carries approval binding diff_hash."""
+        engine = AssessmentEngine()
+
+        assessment = engine.assemble_assessment(
+            decision_packet={
+                "decision_id": "01HDEC0001",
+                "decision": "pass",
+                "composite_score": 0.9,
+                "factors": [],
+                "artifact_ref": {
+                    "uri": "artifact://local/01HART0001",
+                    "diff_hash": "sha256:abc123def456",
+                },
+            },
+            task_data={"task_id": "01HTSK0001"},
+            run_data={"run_id": "01HRUN0001", "stage": "dev"},
+            stale_result={"fresh": True},
+            obligation_result={"fulfillment_rate": 1.0},
+            approval_result={"missing_approvals": [], "required_approvals": []},
+            evidence_result={"evidence_strength": 1.0},
+            context_bundle={"bundle_id": "01HBND0001"},
+        )
+
+        assert assessment.diff_hash == "sha256:abc123def456"
+
+    def test_assemble_extracts_diff_hash_from_top_level_decision_packet(self):
+        """Top-level diff_hash remains supported for adapter compatibility."""
+        engine = AssessmentEngine()
+
+        assessment = engine.assemble_assessment(
+            decision_packet={
+                "decision_id": "01HDEC0001",
+                "decision": "pass",
+                "composite_score": 0.9,
+                "factors": [],
+                "diff_hash": "sha256:top-level",
+            },
+            task_data={"task_id": "01HTSK0001"},
+            run_data={"run_id": "01HRUN0001", "stage": "dev"},
+            stale_result={"fresh": True},
+            obligation_result={"fulfillment_rate": 1.0},
+            approval_result={"missing_approvals": [], "required_approvals": []},
+            evidence_result={"evidence_strength": 1.0},
+            context_bundle={"bundle_id": "01HBND0001"},
+        )
+
+        assert assessment.diff_hash == "sha256:top-level"
+
     def test_assemble_with_stale(self):
         """Asssemble assessment with stale detection."""
         engine = AssessmentEngine()
