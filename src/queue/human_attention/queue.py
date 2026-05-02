@@ -1,5 +1,5 @@
 """
-Human Attention Queue Module
+Human Attention Queue
 
 Routes items requiring human review with SLA management and escalation.
 Implements ownership context checks and reviewer routing.
@@ -9,173 +9,27 @@ Reference: architecture.md SLA Enforcement Logic
 Reference: gate_config.yaml human_queue.sla
 """
 
-from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from enum import StrEnum
 
-from ..common import (
+from src.common import (
     generate_queue_item_id,
     utc_now,
 )
-from ..core import Assessment, Verdict
+from src.core import Assessment
 
-
-class QueueStatus(StrEnum):
-    """Human queue item status."""
-    PENDING = "pending"
-    TAKEN = "taken"
-    RESOLVED = "resolved"
-    ESCALATED = "escalated"
-
-
-class ReasonCode(StrEnum):
-    """Reason for human attention."""
-    TABOO = "taboo"                      # Taboo proximity threshold exceeded
-    REJECTED_CASE = "rejected_case"      # Similar to rejected exemplar
-    HIGH_RISK = "high_risk"              # Risk level critical/high
-    STALE = "stale"                      # Stale docs/approvals detected
-    APPROVAL_MISSING = "approval_missing"  # Required approvals missing
-    EVIDENCE_GAP = "evidence_gap"        # Evidence strength insufficient
-    OBLIGATION_UNFULFILLED = "obligation_unfulfilled"  # Obligations not met
-    UNCERTAINTY_HIGH = "uncertainty_high"  # Decision uncertainty high
-    WAIVER_REQUIRED = "waiver_required"  # Waiver needed for policy bypass
-
-
-class Severity(StrEnum):
-    """Item severity level."""
-    CRITICAL = "critical"
-    HIGH = "high"
-    MEDIUM = "medium"
-    LOW = "low"
-
-
-class Resolution(StrEnum):
-    """Resolution decision for queue item."""
-    APPROVED = "approved"
-    REJECTED = "rejected"
-    DEFERRED = "deferred"
-    REVOKED = "revoked"
-    INFO_REQUESTED = "info_requested"
-
-
-class SLAAction(StrEnum):
-    """SLA enforcement action."""
-    NONE = "none"
-    ESCALATE_ACK_TIMEOUT = "escalate_ack_timeout"
-    ESCALATE_DECISION_TIMEOUT = "escalate_decision_timeout"
-    AUTO_BLOCK = "auto_block"
-    GOVERNANCE_BOARD_NOTIFY = "governance_board_notify"
-
-
-@dataclass
-class SLADefinition:
-    """SLA time limits for severity level."""
-    ack_minutes: int | None = None     # Acknowledgement deadline
-    decision_minutes: int | None = None  # Decision deadline
-    ack_hours: int | None = None        # Alternative hour format
-    decision_hours: int | None = None   # Alternative hour format
-    backlog: bool = False                  # No deadline, backlog queue
-
-    def get_ack_deadline(self, created_at: datetime) -> datetime | None:
-        """Calculate acknowledgement deadline."""
-        if self.ack_minutes:
-            return created_at + timedelta(minutes=self.ack_minutes)
-        if self.ack_hours:
-            return created_at + timedelta(hours=self.ack_hours)
-        return None
-
-    def get_decision_deadline(self, created_at: datetime) -> datetime | None:
-        """Calculate decision deadline."""
-        if self.decision_minutes:
-            return created_at + timedelta(minutes=self.decision_minutes)
-        if self.decision_hours:
-            return created_at + timedelta(hours=self.decision_hours)
-        return None
-
-
-@dataclass
-class OwnershipContext:
-    """
-    Owner permission context for cross-owner approval checks.
-
-    Reference: architecture.md lines 425-442
-    """
-    owner_id: str
-    owner_role: str
-    permission_scope: list[str] = field(default_factory=list)
-    data_classification_access: list[str] = field(default_factory=list)
-    service_scope: list[str] = field(default_factory=list)
-    approval_authority_level: int = 1  # 1-4 hierarchy level
-
-
-@dataclass
-class HumanQueueItem:
-    """
-    Item in human attention queue requiring review.
-
-    Reference: architecture.md lines 395-422
-    """
-    item_id: str
-    assessment_id: str
-    task_id: str
-    run_id: str
-
-    reason_code: ReasonCode
-    severity: Severity
-    required_role: str  # security_reviewer | project_lead | release_manager | governance_board
-
-    # Ownership Context
-    task_owner: str
-    task_owner_type: str  # human | agent | system
-    ownership_context: OwnershipContext
-
-    due_at: datetime
-    sla: SLADefinition
-
-    suggested_actions: list[str] = field(default_factory=list)
-    exemplar_refs: list[str] = field(default_factory=list)
-
-    status: QueueStatus = QueueStatus.PENDING
-    assigned_to: str | None = None
-    taken_at: datetime | None = None
-    resolved_at: datetime | None = None
-    resolution: Resolution | None = None
-    resolution_comment: str = ""
-
-    created_at: datetime = field(default_factory=utc_now)
-
-    # Escalation tracking
-    escalation_level: int = 0
-    escalated_to: str | None = None
-    escalation_reason: str = ""
-
-    # Waiver tracking
-    waiver_id: str | None = None
-    waiver_status: str = ""
-
-
-# Default SLA definitions (from gate_config.yaml)
-DEFAULT_SLA_DEFINITIONS: dict[str, SLADefinition] = {
-    "critical": SLADefinition(ack_minutes=15, decision_minutes=60),
-    "high": SLADefinition(ack_minutes=60, decision_minutes=240),
-    "medium": SLADefinition(ack_hours=8, decision_hours=24),
-    "low": SLADefinition(backlog=True),
-}
-
-# Escalation chain (from gate_config.yaml)
-DEFAULT_ESCALATION_CHAIN: dict[str, list[str]] = {
-    "critical": ["project_lead", "governance_board"],
-    "high": ["project_lead"],
-    "medium": ["owner"],
-}
-
-# Reviewer role mapping (from gate_config.yaml)
-DEFAULT_REVIEWER_ROLES: dict[str, str] = {
-    "security": "security_reviewer",
-    "release": "release_manager",
-    "architecture": "project_lead",
-    "acceptance": "qa_owner",
-}
+from .types import (
+    DEFAULT_ESCALATION_CHAIN,
+    DEFAULT_REVIEWER_ROLES,
+    DEFAULT_SLA_DEFINITIONS,
+    HumanQueueItem,
+    OwnershipContext,
+    QueueStatus,
+    ReasonCode,
+    Resolution,
+    SLAAction,
+    SLADefinition,
+    Severity,
+)
 
 
 class HumanAttentionQueue:
@@ -534,73 +388,9 @@ class HumanAttentionQueue:
         # Placeholder: would come from DecisionPacket
         return []
 
-
-def route_assessment_to_queue(
-    assessment: Assessment,
-    queue: HumanAttentionQueue,
-    task_owner: str,
-    task_owner_type: str = "human"
-) -> HumanQueueItem | None:
-    """
-    Route assessment to human attention queue if needed.
-
-    Args:
-        assessment: Assessment to route.
-        queue: Human attention queue.
-        task_owner: Task owner.
-        task_owner_type: Owner type.
-
-    Returns:
-        HumanQueueItem if routed, None if not needed.
-    """
-    if assessment.final_verdict == Verdict.ALLOW:
-        return None  # No review needed
-
-    # Determine reason code and severity
-    reason_code, severity, required_role = _derive_queue_params(assessment)
-
-    # Add to queue
-    return queue.add_item(
-        assessment=assessment,
-        reason_code=reason_code,
-        severity=severity,
-        required_role=required_role,
-        task_owner=task_owner,
-        task_owner_type=task_owner_type
-    )
+    def list_items(self) -> list[HumanQueueItem]:
+        """List all items in queue."""
+        return list(self._queue.values())
 
 
-def _derive_queue_params(assessment: Assessment) -> tuple:
-    """Derive queue parameters from assessment."""
-    verdict = assessment.final_verdict
-
-    # Critical verdicts
-    if verdict == Verdict.DENY:
-        return ReasonCode.HIGH_RISK, Severity.CRITICAL, "governance_board"
-
-    if verdict == Verdict.STALE_BLOCKED:
-        return ReasonCode.STALE, Severity.HIGH, "project_lead"
-
-    if verdict == Verdict.REQUIRE_HUMAN:
-        # Check reason from verdict_reason
-        reason_str = assessment.verdict_reason.lower()
-        if "taboo" in reason_str:
-            return ReasonCode.TABOO, Severity.HIGH, "security_reviewer"
-        if "uncertainty" in reason_str:
-            return ReasonCode.UNCERTAINTY_HIGH, Severity.MEDIUM, "project_lead"
-        if "obligation" in reason_str:
-            return ReasonCode.OBLIGATION_UNFULFILLED, Severity.HIGH, "project_lead"
-        return ReasonCode.HIGH_RISK, Severity.HIGH, "project_lead"
-
-    if verdict == Verdict.NEEDS_APPROVAL:
-        if assessment.approval_summary.missing_approvals:
-            return ReasonCode.APPROVAL_MISSING, Severity.MEDIUM, "project_lead"
-        if assessment.evidence_summary.evidence_strength < 0.85:
-            return ReasonCode.EVIDENCE_GAP, Severity.MEDIUM, "qa_owner"
-        return ReasonCode.APPROVAL_MISSING, Severity.MEDIUM, "project_lead"
-
-    if verdict == Verdict.REVISE:
-        return ReasonCode.HIGH_RISK, Severity.LOW, "owner"
-
-    # Default
-    return ReasonCode.HIGH_RISK, Severity.MEDIUM, "project_lead"
+__all__ = ["HumanAttentionQueue"]

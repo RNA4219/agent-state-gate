@@ -8,7 +8,7 @@ Reference: AC-004_human_queue_routing.json, AC-005_sla_enforcement.json
 from datetime import UTC, datetime, timedelta
 
 from src.core import ApprovalSummary, Assessment, EvidenceSummary, ObligationSummary, StaleSummary, Verdict
-from src.queue.human_attention_queue import (
+from src.queue.human_attention import (
     HumanAttentionQueue,
     OwnershipContext,
     QueueStatus,
@@ -642,7 +642,7 @@ class TestRouteAssessmentToQueue:
             verdict_reason="All passed",
         )
 
-        from src.queue.human_attention_queue import route_assessment_to_queue
+        from src.queue.human_attention import route_assessment_to_queue
         result = route_assessment_to_queue(assessment, queue, "owner-001")
         assert result is None
 
@@ -665,7 +665,7 @@ class TestRouteAssessmentToQueue:
             verdict_reason="Critical violation",
         )
 
-        from src.queue.human_attention_queue import route_assessment_to_queue
+        from src.queue.human_attention import route_assessment_to_queue
         result = route_assessment_to_queue(assessment, queue, "owner-001")
         assert result is not None
         assert result.severity == Severity.CRITICAL
@@ -689,7 +689,7 @@ class TestRouteAssessmentToQueue:
             verdict_reason="Stale docs detected",
         )
 
-        from src.queue.human_attention_queue import route_assessment_to_queue
+        from src.queue.human_attention import route_assessment_to_queue
         result = route_assessment_to_queue(assessment, queue, "owner-001")
         assert result is not None
         assert result.severity == Severity.HIGH
@@ -713,7 +713,7 @@ class TestRouteAssessmentToQueue:
             verdict_reason="Taboo proximity threshold exceeded",
         )
 
-        from src.queue.human_attention_queue import route_assessment_to_queue
+        from src.queue.human_attention import route_assessment_to_queue
         result = route_assessment_to_queue(assessment, queue, "owner-001")
         assert result is not None
         assert result.reason_code == ReasonCode.TABOO
@@ -737,7 +737,7 @@ class TestRouteAssessmentToQueue:
             verdict_reason="High uncertainty in decision",
         )
 
-        from src.queue.human_attention_queue import route_assessment_to_queue
+        from src.queue.human_attention import route_assessment_to_queue
         result = route_assessment_to_queue(assessment, queue, "owner-001")
         assert result is not None
         assert result.reason_code == ReasonCode.UNCERTAINTY_HIGH
@@ -761,7 +761,7 @@ class TestRouteAssessmentToQueue:
             verdict_reason="Obligation unfulfilled",
         )
 
-        from src.queue.human_attention_queue import route_assessment_to_queue
+        from src.queue.human_attention import route_assessment_to_queue
         result = route_assessment_to_queue(assessment, queue, "owner-001")
         assert result is not None
         assert result.reason_code == ReasonCode.OBLIGATION_UNFULFILLED
@@ -785,7 +785,7 @@ class TestRouteAssessmentToQueue:
             verdict_reason="Missing approvals",
         )
 
-        from src.queue.human_attention_queue import route_assessment_to_queue
+        from src.queue.human_attention import route_assessment_to_queue
         result = route_assessment_to_queue(assessment, queue, "owner-001")
         assert result is not None
         assert result.reason_code == ReasonCode.APPROVAL_MISSING
@@ -809,7 +809,7 @@ class TestRouteAssessmentToQueue:
             verdict_reason="Evidence gap",
         )
 
-        from src.queue.human_attention_queue import route_assessment_to_queue
+        from src.queue.human_attention import route_assessment_to_queue
         result = route_assessment_to_queue(assessment, queue, "owner-001")
         assert result is not None
         assert result.reason_code == ReasonCode.EVIDENCE_GAP
@@ -833,7 +833,7 @@ class TestRouteAssessmentToQueue:
             verdict_reason="Self-correction needed",
         )
 
-        from src.queue.human_attention_queue import route_assessment_to_queue
+        from src.queue.human_attention import route_assessment_to_queue
         result = route_assessment_to_queue(assessment, queue, "owner-001")
         assert result is not None
         assert result.severity == Severity.LOW

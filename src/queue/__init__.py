@@ -4,7 +4,7 @@ agent-state-gate Queue Package
 Human Attention Queue for routing items requiring human review.
 """
 
-from .human_attention_queue import (
+from .human_attention import (
     DEFAULT_ESCALATION_CHAIN,
     DEFAULT_REVIEWER_ROLES,
     DEFAULT_SLA_DEFINITIONS,

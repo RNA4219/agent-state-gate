@@ -37,19 +37,17 @@ code-to-gate 分析で検出された技術的債務の記録と対応計画。
 
 **判定**: 完了 - all modules under 500 lines
 
-### 1.3 src/queue/human_attention_queue.py (607 lines)
+### 1.3 src/queue/human_attention_queue.py → human_attention/ package (分割済み: 2026-05-03)
 
-**現状**: Human Attention Queue handles 4 priority levels with persistence.
-
-**分割計画**:
-| 新モジュール | 内容 | 行数見積 |
+**分割後**:
+| Module | 行数 | 内容 |
 |---|---|---|
-| `queue/priority_handlers.py` | Priority-specific handlers | ~200 |
-| `queue/persistence.py` | Queue persistence logic | ~150 |
-| `queue/dispatch.py` | Queue dispatch logic | ~150 |
-| `queue/__init__.py` | Queue class, public API | ~100 |
+| human_attention/types.py | 185 | Enums, dataclasses, default configs |
+| human_attention/queue.py | 395 | HumanAttentionQueue class |
+| human_attention/routing.py | 89 | Routing functions |
+| human_attention/__init__.py | 44 | Package exports |
 
-**優先度**: Low (Q3) - when queue grows beyond 800 lines
+**判定**: 完了 - all modules under 500 lines
 
 ## 2. UNSAFE_DELETE - 妥当性確認済み
 
