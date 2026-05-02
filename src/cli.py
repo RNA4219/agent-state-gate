@@ -14,7 +14,7 @@ import sys
 
 from .audit.audit_packet import AuditPacket, AuditPacketStore, RetentionClass
 from .common import __version__
-from .core.assessment_engine import AssessmentEngine
+from .core.assessment import AssessmentEngine
 from .queue.human_attention_queue import HumanAttentionQueue
 
 

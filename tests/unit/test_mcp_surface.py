@@ -52,7 +52,7 @@ class TestContractRef:
 
 class TestRecallResult:
     def test_recall_result_creation(self):
-        from src.core.assessment_engine import StaleSummary
+        from src.core.verdict_transformer import StaleSummary
         stale = StaleSummary(fresh=True, stale_items=[], stale_reasons=[])
         result = RecallResult(
             required_docs=[],

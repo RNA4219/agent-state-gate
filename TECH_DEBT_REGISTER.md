@@ -25,19 +25,17 @@ code-to-gate 分析で検出された技術的債務の記録と対応計画。
 **判定**: 進行中 - surface.py still above 500 lines
 **次段階**: Consider further method extraction if needed
 
-### 1.2 src/core/assessment_engine.py (581 lines)
+### 1.2 src/core/assessment_engine.py → assessment/ package (分割済み: 2026-05-03)
 
-**現状**: Assessment engine orchestrates 5 verdict transformations.
-
-**分割計画**:
-| 新モジュール | 内容 | 行数見積 |
+**分割後**:
+| Module | 行数 | 内容 |
 |---|---|---|
-| `assessment/verdict_transformer.py` | Verdict transformation logic | ~200 |
-| `assessment/conflict_resolver.py` | Conflict resolution | ~150 |
-| `assessment/evidence_assembler.py` | Evidence assembly | ~150 |
-| `assessment/__init__.py` | Engine class, public API | ~100 |
+| assessment/types.py | 91 | CausalStep, Counterfactual, Assessment dataclasses |
+| assessment/store.py | 96 | AssessmentStore class |
+| assessment/engine.py | 379 | AssessmentEngine class |
+| assessment/__init__.py | 19 | Package exports |
 
-**優先度**: Low (Q3) - acceptable complexity for core engine
+**判定**: 完了 - all modules under 500 lines
 
 ### 1.3 src/queue/human_attention_queue.py (607 lines)
 

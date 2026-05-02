@@ -7,7 +7,7 @@ Core modules:
 - ConflictResolver: Assessment conflict resolution
 """
 
-from .assessment_engine import (
+from .assessment import (
     Assessment,
     AssessmentEngine,
     AssessmentStore,

@@ -12,7 +12,7 @@ from enum import StrEnum
 from typing import Any
 
 from ..common import generate_id, iso_timestamp
-from .assessment_engine import Assessment
+from .assessment import Assessment
 from .verdict_transformer import get_verdict_priority
 
 
