@@ -10,7 +10,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from src.adapters import AdapterRegistry
-from src.api.mcp_surface import (
+from src.api import (
     AttentionListResult,
     ContractRef,
     DocRef,

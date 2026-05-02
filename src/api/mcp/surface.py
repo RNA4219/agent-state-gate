@@ -1,5 +1,5 @@
 """
-MCP Surface Module
+MCP Surface - Main facade class
 
 MCP façade for agent-context-mcp.
 Provides read-heavy surface for context, gate, and queue operations.
@@ -9,155 +9,45 @@ Reference: BLUEPRINT.md MCP Surface
 Reference: gate_config.yaml mcp section
 """
 
-from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
-from ..adapters import (
+from src.adapters import (
     AdapterRegistry,
     AdapterUnavailableError,
 )
-from ..audit import (
+from src.audit import (
     AuditPacketGenerator,
     EvidenceRecorder,
 )
-from ..common import hash_dict, iso_timestamp, utc_now
-from ..core import (
+from src.common import hash_dict, iso_timestamp, utc_now
+from src.core import (
     ApprovalSummary,
     AssessmentEngine,
     EvidenceSummary,
-    ObligationSummary,
     StaleSummary,
     Verdict,
-    VerdictTransformer,
 )
-from ..queue import (
+from src.queue import (
     HumanAttentionQueue,
     HumanQueueItem,
     QueueStatus,
 )
+from .types import (
+    DocRef,
+    ContractRef,
+    RecallResult,
+    EvidenceRef,
+    ApprovalRef,
+    EvaluateResult,
+    StaleItem,
+    StaleCheckResult,
+    StateGateAssessResult,
+    SLAStatus,
+    AttentionListResult,
+    ReplayContextResult,
+)
 
-# --- Result Types (api_spec.md definitions) ---
-
-@dataclass
-class DocRef:
-    """Document reference for recall result."""
-    doc_id: str
-    version: str
-    priority: str  # required | recommended
-    doc_type: str
-    title: str
-
-
-@dataclass
-class ContractRef:
-    """Contract reference for recall result."""
-    contract_id: str
-    contract_type: str
-    version: str
-
-
-@dataclass
-class RecallResult:
-    """Result from context.recall."""
-    required_docs: list[DocRef]
-    recommended_docs: list[DocRef]
-    contract_refs: list[ContractRef]
-    stale_summary: StaleSummary
-    ack_required: bool
-
-
-@dataclass
-class EvidenceRef:
-    """Evidence reference for evaluate result."""
-    evidence_id: str
-    evidence_type: str
-    status: str
-
-
-@dataclass
-class ApprovalRef:
-    """Approval reference for evaluate result."""
-    approval_id: str
-    approver_role: str
-    status: str
-
-
-@dataclass
-class EvaluateResult:
-    """Result from gate.evaluate."""
-    verdict: Verdict
-    required_evidence: list[EvidenceRef]
-    required_approvals: list[ApprovalRef]
-    missing_approvals: list[str]
-    assessment_id: str
-    causal_trace: list[str]
-    verdict_reason: str
-
-
-@dataclass
-class StaleItem:
-    """Stale item in stale check result."""
-    item_type: str  # doc | approval | acceptance | contract
-    item_id: str
-    current_version: str
-    expected_version: str
-    stale_reason: str
-
-
-@dataclass
-class StaleCheckResult:
-    """Result from context.stale_check."""
-    fresh: bool
-    stale_items: list[StaleItem]
-    stale_reasons: list[str]
-    last_check_at: datetime
-
-
-@dataclass
-class StateGateAssessResult:
-    """Result from state_gate.assess."""
-    assessment_id: str
-    decision_packet_ref: str
-    scores: dict[str, float]  # taboo, drift, anomaly, uncertainty
-    recommendation: str
-    human_queue_required: bool
-    exemplar_refs: list[str]
-    threshold_version: str
-
-
-@dataclass
-class SLAStatus:
-    """SLA status for queue items."""
-    pending_count: int
-    ack_timeout_count: int
-    decision_timeout_count: int
-    escalated_count: int
-
-
-@dataclass
-class AttentionListResult:
-    """Result from attention.list."""
-    items: list[HumanQueueItem]
-    total_pending: int
-    by_severity: dict[str, int]
-    sla_status: dict[str, SLAStatus]
-
-
-@dataclass
-class ReplayContextResult:
-    """Result from run.replay_context."""
-    run_id: str
-    context_snapshot: dict[str, Any]
-    decision_packet: dict[str, Any]
-    assessment: dict[str, Any]
-    audit_packet_ref: str
-    attestation_hash: str
-    decision_diff: dict[str, Any] | None = None
-    reproducibility_verified: bool = True
-
-
-# --- MCP Surface Class ---
 
 class MCPSurface:
     """
@@ -185,8 +75,6 @@ class MCPSurface:
         self._queue = human_queue
         self._recorder = evidence_recorder
         self._config = config or {}
-        self._transformer = VerdictTransformer()
-        self._audit_generator = AuditPacketGenerator()
 
     # --- 1.1 context.recall ---
     def context_recall(
@@ -330,7 +218,6 @@ class MCPSurface:
             stale_reasons=stale_result.get("stale_reasons", [])
         )
 
-        ObligationSummary(fulfillment_rate=1.0)
         approval_summary = ApprovalSummary(
             missing_approvals=required_approvals,
             required_approvals=required_approvals
@@ -338,11 +225,6 @@ class MCPSurface:
         evidence_summary = EvidenceSummary(
             evidence_strength=evidence_result.get("evidence_strength", 1.0)
         )
-
-        # ADVISORY MODE: DecisionPacket from gatefield adapter not connected.
-        # In MVP advisory mode, verdict is derived from stale/approval/evidence checks.
-        # Production blocking mode requires real gatefield DecisionPacket integration.
-        # See: docs/CHECKLISTS.md Production Enforce Entry Criteria
 
         # Determine verdict
         verdict = Verdict.ALLOW
@@ -517,7 +399,7 @@ class MCPSurface:
             AttentionListResult with items and counts.
         """
         # Get items based on filters
-        items = []
+        items: list[HumanQueueItem] = []
         if status:
             status_enum = QueueStatus(status)
             items = [i for i in self._queue.get_pending_items() if i.status == status_enum]
@@ -601,16 +483,11 @@ class MCPSurface:
             "as_of": as_of.isoformat() if as_of else iso_timestamp(),
         }
 
-        # ADVISORY MODE: DecisionPacket mock for replay.
-        # MVP advisory mode uses placeholder decision_packet for context replay.
-        # Production blocking mode requires gatefield DecisionPacket export integration.
-        # See: docs/CHECKLISTS.md Production Enforce Entry Criteria
         decision_packet = {
             "run_id": run_id,
             "decision": "advisory_placeholder",
             "threshold_version": "mvp-advisory",
             "advisory_mode": True,
-            "note": "MVP advisory mode - requires gatefield integration for production"
         }
 
         # Build assessment dict
@@ -656,8 +533,6 @@ class MCPSurface:
         }
         return hash_dict(data)
 
-
-# --- Convenience Functions ---
 
 def create_mcp_surface(
     adapter_registry: AdapterRegistry,

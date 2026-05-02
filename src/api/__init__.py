@@ -4,7 +4,7 @@ agent-state-gate API Package
 MCP Surface for agent-context-mcp integration.
 """
 
-from .mcp_surface import (
+from .mcp import (
     ApprovalRef,
     AttentionListResult,
     ContractRef,
