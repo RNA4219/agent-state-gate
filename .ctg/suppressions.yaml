@@ -1,0 +1,25 @@
+version: ctg/v1
+
+suppressions:
+  # registry.py clear() - in-memory registry cleanup, not actual data deletion
+  - rule_id: UNSAFE_DELETE
+    path: src/adapters/registry.py
+    reason: "AdapterRegistry.clear() is in-memory registry cleanup for test/dev reset, not actual data deletion. False positive."
+    expiry: 2027-05-02
+
+  # LARGE_MODULE suppressions - documented for future refactoring
+
+  - rule_id: LARGE_MODULE
+    path: src/api/mcp_surface.py
+    reason: "MCP surface consolidates 6 tool implementations in single facade. Split into tool-specific handlers planned when surface grows beyond 800 lines."
+    expiry: 2027-05-02
+
+  - rule_id: LARGE_MODULE
+    path: src/core/assessment_engine.py
+    reason: "Assessment engine orchestrates 5 verdict transformations. Acceptable complexity for core engine, documented for review if exceeds 700 lines."
+    expiry: 2027-05-02
+
+  - rule_id: LARGE_MODULE
+    path: src/queue/human_attention_queue.py
+    reason: "Human Attention Queue handles 4 priority levels with persistence. Split into priority-specific queues planned when queue grows beyond 800 lines."
+    expiry: 2027-05-02

@@ -5,19 +5,27 @@
   "curation_notes": "agent-state-gate の初動読込用ホットリスト。統合層の責務、Production runtime、adapter 契約、検収条件を低コストに把握するための主要ノードを並べる。",
   "nodes": [
     {
+      "id": "AGENTS.md",
+      "role": "agent_instructions",
+      "reason": "エージェントが最初に読む repo 固有指示。正本境界、実装時の注意、確認コマンドを短く確認できる。",
+      "caps": "docs/birdseye/caps/AGENTS.md.json",
+      "edges": ["README.md", "HUB.codex.md", "GUARDRAILS.md", "docs/requirements.md"],
+      "last_verified_at": "2026-04-26T00:00:00Z"
+    },
+    {
       "id": "README.md",
       "role": "bootstrap",
-      "reason": "repo の目的、責務、関連ドキュメント、runtime 方針を最短で把握する入口。",
+      "reason": "repo の目的、いつ使うか、正本境界、MCP surface、クイックスタートを最短で把握する入口。",
       "caps": "docs/birdseye/caps/README.md.json",
-      "edges": ["HUB.codex.md", "BLUEPRINT.md", "docs/requirements.md", "docs/RUNBOOK.md"],
+      "edges": ["AGENTS.md", "HUB.codex.md", "docs/requirements.md", "docs/RUNBOOK.md", "docs/EVALUATION.md"],
       "last_verified_at": "2026-04-26T00:00:00Z"
     },
     {
       "id": "HUB.codex.md",
       "role": "navigation",
-      "reason": "ドキュメント依存関係と実装フェーズのハブ。",
+      "reason": "エージェント向けの初動読み順、正本境界、作業領域別の入口、禁止事項を確認するハブ。",
       "caps": "docs/birdseye/caps/HUB.codex.md.json",
-      "edges": ["BLUEPRINT.md", "GUARDRAILS.md", "docs/requirements.md", "docs/RUNBOOK.md", "docs/EVALUATION.md"],
+      "edges": ["AGENTS.md", "README.md", "GUARDRAILS.md", "docs/requirements.md", "docs/EVALUATION.md"],
       "last_verified_at": "2026-04-26T00:00:00Z"
     },
     {

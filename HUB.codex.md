@@ -8,232 +8,182 @@ next_review_due: 2026-05-26
 
 # agent-state-gate HUB
 
-リポジトリ内の仕様・運用MDを集約し、エージェントがタスクを自動分割できるようにするハブ定義。
+`HUB_SCOPE_DECLARATION`: 本ファイルは `agent-state-gate/` repo 内で作業するエージェント向けの入口である。
 
-## 1. 目的
+`agent-state-gate` は、既存 repo の判定・状態・文書鮮度・承認・証跡を束ね、最終 verdict と監査証跡を作る統合 gate 層。新しい State-space Gate 判定エンジンではない。
 
-- リポジトリ配下の計画資料から作業ユニットを抽出し、優先度順に配列
-- 生成されたタスクリストを Task Seed へマッピング
-- ドキュメント間の依存関係を明確化
+## 1. 最短理解
 
-## 2. 入力ファイル分類
+この repo が答える問い:
 
-| ファイル | 役割 | 優先度 |
-|---------|------|-------|
-| `BLUEPRINT.md` | 要件・制約・背景 | 高 |
-| `GUARDRAILS.md` | ガードレール/行動指針 | 高 |
-| `docs/RUNBOOK.md` | 開発フロー・手順 | 中 |
-| `docs/EVALUATION.md` | 受け入れ基準・品質指標 | 中 |
-| `docs/CHECKLISTS.md` | リリース/レビュー確認項目 | 低 |
-| `docs/requirements.md` | 要件定義正本 | 高 |
-| `docs/architecture.md` | アーキテクチャ設計 | 高 |
-| `docs/api_spec.md` | API仕様 | 高 |
-| `docs/adapter_contract.md` | Adapter契約 | 高 |
-| `docs/PRODUCT_ACCEPTANCE_REFACTOR.md` | プロダクト検収・リファクタ台帳 | 高 |
-| `docs/birdseye/index.json` | Birdseye node / edge index | 高 |
-| `docs/birdseye/hot.json` | Birdseye hot list | 高 |
-| `docs/BIRDSEYE.md` | Birdseye フォールバック | 中 |
+- この agent action を進めてよいか
+- 人間の approval が必要か
+- stale context や evidence 不足で止めるべきか
+- 後で監査・再現できるだけの情報が残っているか
 
-補完資料:
+この repo が作るもの:
 
-- `README.md`: リポジトリ概要と参照リンク
-- `CHANGELOG.md`: 完了タスクと履歴の記録
-- `deep-research-report (9).md`: 詳細要件検討ログ。正本反映後は `docs/requirements.md` / `BLUEPRINT.md` / `docs/RUNBOOK.md` を優先する
-- `docs/birdseye/caps/*.json`: 主要ドキュメントの軽量 capsule。詳細は正本ドキュメントへ戻る
+- `Assessment`
+- `HumanQueueItem`
+- `AuditPacket`
+- MCP facade / CLI から返す統合 verdict
 
-更新日: 2026-04-26
+この repo が作らないもの:
 
-## 3. ドキュメント依存関係
+- State-space score の再計算
+- Task / Run / ContextBundle の正本
+- Evidence store の正本
+- Approval 契約の正本
 
+## 2. 初動読み順
+
+### 変更前に必ず読む
+
+1. `AGENTS.md`
+2. `README.md`
+3. `GUARDRAILS.md`
+4. `docs/requirements.md`
+
+### 低コストに把握したいとき
+
+1. `docs/birdseye/index.json`
+2. `docs/birdseye/hot.json`
+3. 変更対象に近い `docs/birdseye/caps/*.json`
+4. 詳細が必要になったら正本 Markdown に戻る
+
+### 実装領域別
+
+| 触る場所 | 先に読む |
+|---|---|
+| `src/core/*` | `docs/requirements.md`, `docs/architecture.md`, `config/gate_config.yaml` |
+| `src/adapters/*` | `docs/adapter_contract.md`, `GUARDRAILS.md` |
+| `src/api/mcp_surface.py` | `docs/api_spec.md`, `GUARDRAILS.md` |
+| `src/queue/*` | `docs/architecture.md`, `docs/requirements.md` |
+| `src/audit/*` | `docs/requirements.md`, `docs/EVALUATION.md` |
+| CLI / tests | `README.md`, `docs/RUNBOOK.md`, `CHANGELOG.md` |
+
+## 3. 正本境界
+
+| 対象 | 正本 | この repo の扱い |
+|---|---|---|
+| Task / Run / ContextBundle | `agent-taskstate` | 参照し、Assessment に link する |
+| DecisionPacket | `agent-gatefield` | 受け取り、統合判断へ変換する |
+| Evidence / Acceptance | `workflow-cookbook` | summary と evidence ref を扱う |
+| Approval / Risk 契約 | `agent-protocols` | approval 要件を導出・検証する |
+| Stage / publish hold | `shipyard-cp` | stage 取得と hold 接続を行う |
+| Assessment / HumanQueueItem / AuditPacket | `agent-state-gate` | この repo の正本 |
+
+## 4. 公開 surface
+
+| Surface | 実体 | 用途 |
+|---|---|---|
+| CLI | `src/cli.py` | local debug、queue/audit/gate の手動確認 |
+| MCP facade | `src/api/mcp_surface.py` | agent-context-mcp からの統合 gate 呼び出し |
+| Core | `src/core/*` | Assessment assembly、verdict 変換、衝突解決 |
+| Adapters | `src/adapters/*` | 外部 repo との契約境界 |
+| Queue | `src/queue/human_attention_queue.py` | 人間レビュー待ちの管理 |
+| Audit | `src/audit/*` | audit packet と evidence record |
+
+MCP surface の公開 tool:
+
+- `context.recall`
+- `gate.evaluate`
+- `context.stale_check`
+- `state_gate.assess`
+- `attention.list`
+- `run.replay_context`
+
+## 5. Verdict 変換の要点
+
+入力側:
+
+- `pass`
+- `warn`
+- `hold`
+- `block`
+
+出力側:
+
+- `allow`
+- `needs_approval`
+- `stale_blocked`
+- `deny`
+- 内部判断として `require_human` / `revise` を扱う箇所がある
+
+優先順位:
+
+```text
+critical static fail
+> taboo block / secret / compliance block
+> approval or stale hard block
+> require_human
+> revise
+> warn
+> pass
 ```
-BLUEPRINT.md (要件)
-    │
-    ├──→ docs/requirements.md (詳細要件)
-    │        │
-    │        ├──→ docs/architecture.md (アーキテクチャ)
-    │        │
-    │        ├──→ docs/api_spec.md (API仕様)
-    │        │
-    │        └──→ docs/adapter_contract.md (Adapter契約)
-    │
-    ├──→ docs/EVALUATION.md (受入基準)
-    ├──→ docs/PRODUCT_ACCEPTANCE_REFACTOR.md (検収・リファクタ台帳)
-    │
-    └──→ docs/RUNBOOK.md (開発フロー)
-             │
-            └──→ docs/CHECKLISTS.md (チェックリスト)
 
-docs/birdseye/index.json (Birdseye)
-    │
-    ├──→ docs/birdseye/hot.json (初動ホットリスト)
-    ├──→ docs/birdseye/caps/*.json (軽量要約)
-    └──→ docs/BIRDSEYE.md (フォールバック)
+高リスク action で adapter / KB / approval / evidence が不明な場合、検出不能のまま `allow` にしない。
 
-GUARDRAILS.md (行動指針)
-    │
-    └──→ 全ドキュメントに適用
+## 6. 現在の状態
+
+v0.4.3 時点の実装状態:
+
+- core engine 実装済み
+- adapters 実装済み
+- Human Attention Queue 実装済み
+- Audit / Evidence recorder 実装済み
+- MCP facade 実装済み
+- CLI 実装済み
+- unit tests / golden fixtures あり
+
+重要な注意:
+
+- adapter が実接続されていない場面では advisory mode の fallback がある。
+- production blocking mode は、実 `agent-gatefield` DecisionPacket 連携、PostgreSQL/pgvector backend、migration、health check、backup、retention、failure_policy 検証後にのみ扱う。
+- mock / in-memory は local / CI の contract test 用であり、本番代替ではない。
+
+## 7. よくある作業と入口
+
+| 依頼 | 入口 |
+|---|---|
+| README や説明をわかりやすくする | `README.md`, `AGENTS.md`, このファイル |
+| verdict 変換を直す | `src/core/verdict_transformer.py`, `tests/unit/test_verdict_transformer.py` |
+| Assessment を直す | `src/core/assessment_engine.py`, `tests/unit/test_assessment_engine.py` |
+| adapter 契約を直す | `docs/adapter_contract.md`, `src/adapters/*`, `tests/unit/test_adapters.py` |
+| MCP tool を直す | `docs/api_spec.md`, `src/api/mcp_surface.py`, `tests/unit/test_mcp_surface.py` |
+| queue を直す | `src/queue/human_attention_queue.py`, `tests/unit/test_human_attention_queue.py` |
+| audit / evidence を直す | `src/audit/*`, `tests/unit/test_audit_packet.py`, `tests/unit/test_evidence_recorder.py` |
+| 検収やリリース判断 | `docs/EVALUATION.md`, `docs/CHECKLISTS.md`, `docs/PRODUCT_ACCEPTANCE_REFACTOR.md` |
+
+## 8. 確認コマンド
+
+標準:
+
+```bash
+uv run pytest
+uv run ruff check .
+uv run agent-state-gate --help
 ```
 
-## 4. タスク分割フロー
+fallback:
 
-1. **スキャン**: ルートと `docs/` 配下を再帰探索
-2. **優先度抽出**: Front matter の `priority`, `status` を確認
-3. **依存解決**: ドキュメント間の参照関係を解析
-4. **粒度調整**: 作業ユニットを `<= 0.5d` 目安に分割
-5. **テンプレート投影**: `TASK.codex.md` 形式へ変換
-6. **出力整形**: 優先度・依存順にソート
-
-## 5. Task Status & Blockers
-
-```yaml
-許容ステータス:
-  - [] or [ ]: 未着手・未割り振り
-  - planned: バックログ
-  - active: 優先キュー入り（担当/期日付き）
-  - in_progress: 着手中
-  - reviewing: レビュー待ち
-  - blocked: ブロック中
-  - done: 完了
-
-標準遷移:
-  planned → active → in_progress → reviewing → done
-
-例外遷移:
-  in_progress → blocked → in_progress
+```bash
+pip install -e .
+pytest tests/
+agent-state-gate --help
 ```
 
-## 6. 実装ロードマップと工数見積
+## 9. 更新ルール
 
-### Phase 1: プロジェクト初期化 ✅ DONE
+- README を変えたら `AGENTS.md` とこの HUB の導線が矛盾しないか確認する。
+- 正本仕様を変えたら `docs/requirements.md` を先に更新し、関連する architecture / API / adapter docs を同期する。
+- Birdseye を更新する場合は `docs/birdseye/index.json`、`docs/birdseye/hot.json`、該当 `caps/*.json` を一緒に整える。
+- CHANGELOG は実装・検証の履歴として扱い、未来の計画表の代わりにしない。
 
-| Task | Estimate | Status |
-|---|---:|---|
-| プロジェクト構造作成 | 0.5d | done |
-| README.md, BLUEPRINT.md, HUB.codex.md 作成 | 0.5d | done |
-| docs/architecture.md 作成 | 1d | done |
-| docs/api_spec.md 作成 | 1d | done |
-| docs/adapter_contract.md 作成 | 1d | done |
-| config/gate_config.yaml 作成 | 0.5d | done |
-| pyproject.toml 作成 | 0.25d | done |
-| docs/RUNBOOK.md 作成 | 0.25d | done |
-| docs/BIRDSEYE.md, docs/birdseye/* 作成 | 0.5d | done |
-| docs/PRODUCT_ACCEPTANCE_REFACTOR.md 作成 | 0.5d | done |
-| **Phase 1 Total** | **6.0d** | **done** |
+## 10. 禁止事項
 
-### Phase 2: Adapter実装
-
-| Adapter | Estimate | Key Tasks | Dependencies |
-|---|---:|---|---|
-| gatefield_adapter | 2d | DecisionPacket接続、evaluate(), enqueue_review() | agent-gatefield DATA_TYPES_SPEC |
-| taskstate_adapter | 2d | Task/Run/ContextBundle接続、typed_ref正規化 | agent-taskstate typed_ref.py |
-| protocols_adapter | 1.5d | risk derivation, approval derivation | agent-protocols schemas |
-| memx_adapter | 1.5d | docs resolve, stale_check, ack | memx-resolver interfaces |
-| shipyard_adapter | 1d | stage取得, hold_for_review() | shipyard-cp api-contract |
-| workflow_adapter | 1d | evidence_report, acceptance_index | workflow-cookbook generate_evidence_report.py |
-| AdapterRegistry | 0.5d | register, health_check_all | 全Adapter |
-| **Phase 2 Total** | **8d** | | |
-
-### Phase 3: Core Engine実装
-
-| Component | Estimate | Key Tasks | Dependencies |
-|---|---:|---|---|
-| assessment_engine | 2d | Assessment assembly, causal_trace生成 | DecisionPacket + 全Adapter |
-| verdict_transformer | 1.5d | 9条件変換ロジック, threshold適用 | BLUEPRINT Verdict変換規則 |
-| conflict_resolver | 1d | authority_hierarchy適用, 衝突解決 | gate_config.yaml authority |
-| typed_ref_domain_ext | 0.5d | KNOWN_DOMAINS拡張 | agent-taskstate typed_ref.py |
-| **Phase 3 Total** | **5d** | | |
-
-### Phase 4: Human Attention Queue
-
-| Component | Estimate | Key Tasks | Dependencies |
-|---|---:|---|---|
-| human_attention_queue | 2d | enqueue, take, resolve, escalate | architecture.md HumanQueueItem |
-| sla_enforcement | 1d | SLA期限監視, auto_block, escalation | architecture.md SLA Enforcement |
-| waiver_process | 1d | waiver申請/審査/無効化フロー | gate_config.yaml waiver |
-| reviewer_routing | 0.5d | required_role → reviewer mapping | gate_config.yaml reviewer_roles |
-| **Phase 4 Total** | **4.5d** | | |
-
-### Phase 5: Audit & Evidence
-
-| Component | Estimate | Key Tasks | Dependencies |
-|---|---:|---|---|
-| audit_packet_generator | 1.5d | AuditPacket生成, JSONL/OTLP export | architecture.md AuditPacket |
-| evidence_recorder | 1d | evidence.record, attested snapshot | workflow-cookbook evidence_bridge |
-| replay_engine | 1d | run.replay_context, decision_diff | agent-taskstate export |
-| retention_policy | 0.5d | retention_class適用, expires_at計算 | gate_config.yaml audit.retention |
-| **Phase 5 Total** | **4d** | | |
-
-### Phase 6: MCP Surface API
-
-| API | Estimate | Key Tasks | Dependencies |
-|---|---:|---|---|
-| context.recall | 1d | memx + taskstate routing, RecallResult | Phase 2 adapters |
-| gate.evaluate | 1.5d | 全adapter統合, EvaluateResult | Phase 3 assessment_engine |
-| context.stale_check | 0.5d | memx stale_check routing | memx_adapter |
-| state_gate.assess | 1d | gatefield + assessment routing | gatefield_adapter + assessment_engine |
-| attention.list | 0.5d | Human Queue routing | Phase 4 human_attention_queue |
-| run.replay_context | 0.5d | audit + taskstate routing | Phase 5 replay_engine |
-| MCP Error handling | 0.5d | error types, HTTP equivalent mapping | api_spec.md Error Types |
-| **Phase 6 Total** | **5.5d** | | |
-
-### 総工数見積
-
-| Phase | Estimate | Buffer (20%) | Total |
-|---|---:|---:|---:|
-| Phase 1 | 6.0d | done | done |
-| Phase 2 | 8d | 1.6d | 9.6d |
-| Phase 3 | 5d | 1d | 6d |
-| Phase 4 | 4.5d | 0.9d | 5.4d |
-| Phase 5 | 4d | 0.8d | 4.8d |
-| Phase 6 | 5.5d | 1.1d | 6.6d |
-| **MVP Total** | **32d** | **6.4d** | **38.4d** (~8 weeks) |
-
----
-
-## 7. 現在のタスク状態
-
-### 完了 (Phase 1)
-
-- [x] プロジェクト構造作成
-- [x] README.md, BLUEPRINT.md, HUB.codex.md 作成
-- [x] docs/RUNBOOK.md 作成
-- [x] docs/BIRDSEYE.md, docs/birdseye/* 作成
-- [x] docs/PRODUCT_ACCEPTANCE_REFACTOR.md 作成
-- [x] docs/architecture.md 作成 (Gap解消含む)
-- [x] docs/api_spec.md 作成
-- [x] docs/adapter_contract.md 作成 (Gap解消含む)
-- [x] config/gate_config.yaml 作成 (Waiverプロセス追加)
-- [x] pyproject.toml 作成
-- [x] 仕様書完成度検収 PASS (90/100)
-- [x] GAP-001: typed_ref実装状況確認 ✅ agent-taskstate実装済み
-- [x] GAP-002: CausalStep contribution_weight計算ロジック追加
-- [x] GAP-003: Risk derivation閾値定義追加
-- [x] GAP-006: Waiver審査プロセス追加
-
-### 未着手 (Phase 2-6)
-
-- [ ] Phase 2: Adapter実装 (9.6d)
-- [ ] Phase 3: Core Engine実装 (6d)
-- [ ] Phase 4: Human Attention Queue (5.4d)
-- [ ] Phase 5: Audit & Evidence (4.8d)
-- [ ] Phase 6: MCP Surface API (6.6d)
-
-## 7. 出力例（Task Seed）
-
-```yaml
-- task_id: 20260426-01
-  source: docs/architecture.md#Phase1
-  objective: gatefield_adapter 実装
-  scope:
-    in: [src/adapters/gatefield_adapter.py]
-    out: [src/core/assessment_engine.py]
-  requirements:
-    behavior:
-      - DecisionPacket ingestion
-      - evaluate() 接続
-    constraints:
-      - BLUEPRINT 4.3準拠
-  commands:
-    - pytest tests/adapters/test_gatefield_adapter.py -v
-  dependencies: []
-```
+- `agent-gatefield` の score や state vector をこの repo で再計算する
+- 他 repo の正本をこの repo に移して再定義する
+- MCP から dangerous mutation を直接公開する
+- 古い `diff_hash` / `context_hash` の approval を再利用する
+- mock / in-memory を production enforce の代替にする

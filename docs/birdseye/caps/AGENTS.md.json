@@ -1,0 +1,11 @@
+{
+  "id": "AGENTS.md",
+  "role": "agent_instructions",
+  "public_api": [],
+  "summary": "エージェントが agent-state-gate で作業する前に読む repo 固有指示。初動読み順、正本境界、実装時の注意、よく触る場所、確認コマンド、ドキュメント同期ルールを示す。",
+  "deps_out": ["README.md", "HUB.codex.md", "GUARDRAILS.md", "docs/requirements.md"],
+  "deps_in": ["README.md", "HUB.codex.md", "docs/BIRDSEYE.md"],
+  "risks": ["他 repo の正本を再定義しないこと、agent-gatefield の判定を再実装しないこと、mock / in-memory を本番代替にしないことを維持する"],
+  "tests": ["手動: AGENTS.md の参照先が存在することを確認"],
+  "generated_at": "2026-04-26"
+}

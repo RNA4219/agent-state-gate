@@ -1,15 +1,20 @@
 {
   "generated_at": "00001",
   "nodes": {
+    "AGENTS.md": {
+      "role": "agent_instructions",
+      "caps": "docs/birdseye/caps/AGENTS.md.json",
+      "mtime": "2026-04-26"
+    },
     "README.md": {
       "role": "overview",
       "caps": "docs/birdseye/caps/README.md.json",
-      "mtime": "00001"
+      "mtime": "2026-04-26"
     },
     "HUB.codex.md": {
       "role": "navigation",
       "caps": "docs/birdseye/caps/HUB.codex.md.json",
-      "mtime": "00001"
+      "mtime": "2026-04-26"
     },
     "BLUEPRINT.md": {
       "role": "requirements",
@@ -78,13 +83,19 @@
     }
   },
   "edges": [
+    ["AGENTS.md", "README.md"],
+    ["AGENTS.md", "HUB.codex.md"],
+    ["AGENTS.md", "GUARDRAILS.md"],
+    ["AGENTS.md", "docs/requirements.md"],
     ["README.md", "HUB.codex.md"],
+    ["README.md", "AGENTS.md"],
     ["README.md", "BLUEPRINT.md"],
     ["README.md", "docs/requirements.md"],
     ["README.md", "docs/RUNBOOK.md"],
     ["README.md", "docs/EVALUATION.md"],
     ["README.md", "docs/adapter_contract.md"],
     ["HUB.codex.md", "BLUEPRINT.md"],
+    ["HUB.codex.md", "AGENTS.md"],
     ["HUB.codex.md", "GUARDRAILS.md"],
     ["HUB.codex.md", "docs/requirements.md"],
     ["HUB.codex.md", "docs/RUNBOOK.md"],

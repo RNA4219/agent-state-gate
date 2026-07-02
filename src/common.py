@@ -114,7 +114,7 @@ def parse_iso_timestamp(ts: str) -> datetime:
     return datetime.fromisoformat(ts)
 
 
-__version__ = "0.4.2"
+__version__ = "0.4.3"
 
 # Common constants
 SCHEMA_VERSION = "1.0.0"

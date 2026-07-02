@@ -2,10 +2,10 @@
   "id": "HUB.codex.md",
   "role": "navigation",
   "public_api": [],
-  "summary": "repo 内の仕様・運用 MD を集約し、作業ユニットと依存関係を整理するハブ。",
-  "deps_out": ["README.md", "BLUEPRINT.md", "GUARDRAILS.md", "docs/requirements.md", "docs/RUNBOOK.md", "docs/EVALUATION.md", "docs/CHECKLISTS.md"],
-  "deps_in": ["README.md", "docs/BIRDSEYE.md"],
-  "risks": ["docs/RUNBOOK.md など新規導線を追加したらハブの入力ファイル分類とタスク状態を更新する"],
+  "summary": "エージェント向けに、agent-state-gate の役割、初動読み順、正本境界、surface、実装状態、作業別入口、確認コマンド、禁止事項をまとめるハブ。",
+  "deps_out": ["AGENTS.md", "README.md", "GUARDRAILS.md", "docs/requirements.md", "docs/RUNBOOK.md", "docs/EVALUATION.md", "docs/CHECKLISTS.md"],
+  "deps_in": ["AGENTS.md", "README.md", "docs/BIRDSEYE.md"],
+  "risks": ["古い Phase 未着手表現や実装状態と矛盾するロードマップを正本のように扱わない"],
   "tests": ["手動: HUB の参照先と docs/birdseye/index.json の node が対応することを確認"],
-  "generated_at": "00001"
+  "generated_at": "2026-04-26"
 }

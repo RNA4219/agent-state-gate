@@ -1,0 +1,38 @@
+version: ctg/v1
+
+policyId: agent-state-gate-policy
+description: Quality policy for agent-state-gate repository
+
+blocking:
+  severity:
+    critical: true
+    high: false
+    medium: false
+    low: false
+  category:
+    auth: false
+    payment: false
+    validation: false
+    data: false
+    config: false
+    maintainability: false
+    testing: false
+    compatibility: false
+    releaseRisk: false
+    security: false
+  rules:
+    # Do not block on any specific rule
+  count:
+    criticalMax: 0
+    highMax: 100
+    mediumMax: 100
+    lowMax: 100
+
+readiness:
+  criticalFindingStatus: needs_review
+  requireLlm: false
+  allowSuppressed: true
+
+suppression:
+  file: .ctg/suppressions.yaml
+  expiryWarningDays: 30

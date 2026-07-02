@@ -2,10 +2,10 @@
   "id": "README.md",
   "role": "overview",
   "public_api": [],
-  "summary": "agent-state-gate の目的、責務、MCP surface、P0 scope、runtime 方針、関連 repo を案内する入口。",
-  "deps_out": ["HUB.codex.md", "BLUEPRINT.md", "docs/requirements.md", "docs/RUNBOOK.md", "docs/EVALUATION.md", "docs/adapter_contract.md"],
-  "deps_in": ["HUB.codex.md", "docs/BIRDSEYE.md"],
-  "risks": ["README だけを読んだ利用者が mock / in-memory を本番代替と誤解しないよう Runtime 方針を維持する"],
+  "summary": "agent-state-gate を、エージェント作業の allow / needs_approval / stale_blocked / deny を返す統合 gate 層として説明する入口。用途、正本境界、MCP surface、実装状態、クイックスタート、読む順番を案内する。",
+  "deps_out": ["AGENTS.md", "HUB.codex.md", "docs/requirements.md", "docs/RUNBOOK.md", "docs/EVALUATION.md", "docs/adapter_contract.md"],
+  "deps_in": ["AGENTS.md", "HUB.codex.md", "docs/BIRDSEYE.md"],
+  "risks": ["agent-gatefield の score 再計算や mock / in-memory の本番代替利用を許す説明に戻さない"],
   "tests": ["手動: 参照ドキュメントが存在することを確認"],
-  "generated_at": "00001"
+  "generated_at": "2026-04-26"
 }
