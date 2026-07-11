@@ -1,0 +1,19 @@
+{
+  "schema_version": "2.0.0",
+  "decision_id": "DEC-CONTRACT-V2",
+  "run_id": "RUN-CONTRACT-V2",
+  "artifact_id": "ART-CONTRACT-V2",
+  "decision": "hold",
+  "composite_score": 0.5,
+  "factors": [],
+  "exemplar_refs": [],
+  "action": {"action_type": "human_review"},
+  "threshold_version": "sha256:threshold-v2",
+  "policy_version": "gate-policy-v2",
+  "static_gate_summary": {"all_passed": false, "gates_executed": []},
+  "created_at": "2026-07-11T00:00:00+00:00",
+  "evidence_status": "partial",
+  "degraded_components": ["qdrant"],
+  "request_id": "REQ-CONTRACT-V2",
+  "state_vector_ref": "state://RUN-CONTRACT-V2"
+}

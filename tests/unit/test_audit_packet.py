@@ -6,15 +6,15 @@ Tests audit packet generation, export, and storage.
 
 from unittest.mock import MagicMock
 
-from src.audit.audit_packet import (
+from agent_state_gate.audit.audit_packet import (
     AuditPacket,
     AuditPacketGenerator,
     AuditPacketStore,
     RetentionClass,
     create_audit_packet,
 )
-from src.common import utc_now
-from src.core.verdict_transformer import Verdict
+from agent_state_gate.common import utc_now
+from agent_state_gate.core.verdict_transformer import Verdict
 
 
 class TestRetentionClass:

@@ -5,7 +5,7 @@ Tests evidence recording, linking, and retrieval.
 """
 
 
-from src.audit.evidence_recorder import (
+from agent_state_gate.audit.evidence_recorder import (
     EvidenceItem,
     EvidenceRecorder,
     EvidenceStatus,

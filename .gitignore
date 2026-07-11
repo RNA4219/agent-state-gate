@@ -1,0 +1,13 @@
+.coverage
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.agent-state-gate/
+agent-state-gate.db*
+

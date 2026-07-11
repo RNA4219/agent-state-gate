@@ -7,7 +7,7 @@ Reference: AC-006_typed_ref_canonical.json golden fixture
 
 import pytest
 
-from src.typed_ref import (
+from agent_state_gate.typed_ref import (
     KNOWN_DOMAINS,
     KNOWN_ENTITY_TYPES,
     KNOWN_PROVIDERS,

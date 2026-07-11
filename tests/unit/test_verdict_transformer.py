@@ -5,7 +5,7 @@ Tests resolve_verdict logic with Decision Table rules.
 Reference: BLUEPRINT.md Section 6, AC-003_verdict_transformation.json
 """
 
-from src.core.verdict_transformer import (
+from agent_state_gate.core.verdict_transformer import (
     ApprovalSummary,
     Decision,
     EvidenceSummary,

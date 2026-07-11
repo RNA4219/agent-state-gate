@@ -1,207 +1,119 @@
-"""
-Unit tests for CLI module.
-
-Tests command-line interface for agent-state-gate.
-"""
+"""CLI 0.5 service-backed contract tests."""
 
 import json
+from argparse import Namespace
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from src.cli import dispatch_command, handle_audit, handle_gate, handle_queue, main, output_result
+from agent_state_gate.cli import build_parser, dispatch_command, main, output_result
+from agent_state_gate.config import AppConfig, RuntimeProfile
+from agent_state_gate.models import EvaluateResult, ReplayResult, ReplayStatus, RequestContext
 
 
-class TestCLIMain:
-    @patch("sys.argv", ["agent-state-gate", "--help"])
-    def test_main_help(self):
-        with pytest.raises(SystemExit) as exc:
-            main()
-        assert exc.value.code == 0
-
-    @patch("sys.argv", ["agent-state-gate", "--version"])
-    def test_main_version(self):
-        with pytest.raises(SystemExit) as exc:
-            main()
-        assert exc.value.code == 0
+def _runtime(service: MagicMock) -> tuple[AppConfig, MagicMock, RequestContext]:
+    config = AppConfig.model_validate(
+        {"runtime_profile": "local_advisory", "database": {"url": "sqlite:///:memory:"}}
+    )
+    context = RequestContext(tenant_id="tenant-a", subject="reviewer", roles=frozenset({"developer"}))
+    return config, service, context
 
 
-class TestDispatchCommand:
-    def test_dispatch_gate(self):
-        args = MagicMock()
-        args.command = "gate"
-        args.action = "assess"
-        args.task = "TASK-001"
-        args.run = "RUN-001"
-        args.output = "json"
+def _evaluate_args() -> Namespace:
+    return Namespace(
+        command="gate",
+        action="evaluate",
+        task="TASK-1",
+        run="RUN-1",
+        action_type="edit_repo",
+        capability=[],
+        artifact_ref=[],
+        touched_path=[],
+        diff_hash=None,
+    )
 
-        result = dispatch_command(args)
-        assert "task_id" in result
 
-    def test_dispatch_queue(self):
-        args = MagicMock()
-        args.command = "queue"
-        args.action = "list"
-        args.status = None
+@pytest.mark.parametrize(
+    ("verdict", "expected"),
+    [
+        ("allow", 0),
+        ("needs_approval", 2),
+        ("require_human", 2),
+        ("revise", 2),
+        ("stale_blocked", 2),
+        ("deny", 3),
+    ],
+)
+def test_gate_exit_code_contract(verdict: str, expected: int) -> None:
+    service = MagicMock()
+    service.evaluate.return_value = EvaluateResult(
+        verdict=verdict,
+        assessment_id="ASM-1",
+        verdict_reason="contract test",
+        runtime_profile=RuntimeProfile.LOCAL_ADVISORY,
+    )
+    with patch("agent_state_gate.cli._runtime", return_value=_runtime(service)):
+        payload, exit_code = dispatch_command(_evaluate_args())
+    assert payload["verdict"] == verdict
+    assert exit_code == expected
 
-        result = dispatch_command(args)
-        assert "items" in result
 
-    def test_dispatch_audit(self):
-        args = MagicMock()
-        args.command = "audit"
-        args.action = "export"
+def test_queue_take_requires_reviewer() -> None:
+    parser = build_parser()
+    with pytest.raises(SystemExit) as exc:
+        parser.parse_args(["queue", "take", "--item", "Q-1"])
+    assert exc.value.code == 2
 
-        result = dispatch_command(args)
-        assert "packets" in result
 
-    def test_dispatch_unknown(self):
-        args = MagicMock()
-        args.command = "unknown"
-        with pytest.raises(ValueError):
+def test_queue_state_is_read_from_persistent_service() -> None:
+    service = MagicMock()
+    service.database.list_attention.return_value = [{"item_id": "Q-1", "tenant_id": "tenant-a"}]
+    args = Namespace(command="queue", action="list", status=None, reviewer_role=None)
+    with patch("agent_state_gate.cli._runtime", return_value=_runtime(service)):
+        payload, exit_code = dispatch_command(args)
+    service.database.list_attention.assert_called_once_with("tenant-a", status=None, reviewer_role=None)
+    assert payload["count"] == 1
+    assert exit_code == 0
+
+
+def test_replay_unavailable_is_nonzero() -> None:
+    service = MagicMock()
+    service.replay.return_value = ReplayResult(run_id="RUN-1", status=ReplayStatus.UNAVAILABLE)
+    args = Namespace(command="replay", run="RUN-1")
+    with patch("agent_state_gate.cli._runtime", return_value=_runtime(service)):
+        payload, exit_code = dispatch_command(args)
+    assert payload["status"] == "unavailable"
+    assert exit_code == 2
+
+
+def test_output_result_json(capsys: pytest.CaptureFixture[str]) -> None:
+    output_result({"key": "value"}, "json")
+    assert json.loads(capsys.readouterr().out) == {"key": "value"}
+
+
+def test_output_result_text(capsys: pytest.CaptureFixture[str]) -> None:
+    output_result({"key": "value"}, "text")
+    assert capsys.readouterr().out == "key: value\n"
+
+
+@patch("sys.argv", ["agent-state-gate", "--help"])
+def test_main_help() -> None:
+    with pytest.raises(SystemExit) as exc:
+        main()
+    assert exc.value.code == 0
+
+
+@patch("sys.argv", ["agent-state-gate", "--version"])
+def test_main_version() -> None:
+    with pytest.raises(SystemExit) as exc:
+        main()
+    assert exc.value.code == 0
+
+
+def test_unknown_command_is_rejected() -> None:
+    service = MagicMock()
+    args = Namespace(command="unknown")
+    with patch("agent_state_gate.cli._runtime", return_value=_runtime(service)):
+        with pytest.raises(ValueError, match="unsupported command"):
             dispatch_command(args)
 
-
-class TestHandleGate:
-    def test_handle_gate_assess(self):
-        args = MagicMock()
-        args.action = "assess"
-        args.task = "TASK-001"
-        args.run = "RUN-001"
-
-        result = handle_gate(args)
-        assert result["task_id"] == "TASK-001"
-        assert "assessments" in result
-
-    def test_handle_gate_evaluate(self):
-        args = MagicMock()
-        args.action = "evaluate"
-        args.task = "TASK-001"
-        args.run = "RUN-001"
-
-        result = handle_gate(args)
-        assert result["task_id"] == "TASK-001"
-        assert result["run_id"] == "RUN-001"
-        assert result["status"] == "mock_evaluation"
-
-    def test_handle_gate_unknown_action(self):
-        args = MagicMock()
-        args.action = "unknown"
-        with pytest.raises(ValueError):
-            handle_gate(args)
-
-
-class TestHandleQueue:
-    def test_handle_queue_list(self):
-        args = MagicMock()
-        args.action = "list"
-        args.status = None
-
-        result = handle_queue(args)
-        assert "items" in result
-
-    def test_handle_queue_list_with_status(self):
-        args = MagicMock()
-        args.action = "list"
-        args.status = "pending"
-
-        result = handle_queue(args)
-        assert "items" in result
-
-    def test_handle_queue_take_missing_item(self):
-        args = MagicMock()
-        args.action = "take"
-        args.item = None
-
-        with pytest.raises(ValueError, match="--item required"):
-            handle_queue(args)
-
-    def test_handle_queue_resolve_missing_item(self):
-        args = MagicMock()
-        args.action = "resolve"
-        args.item = None
-        args.resolution = "approved"
-
-        with pytest.raises(ValueError, match="--item required"):
-            handle_queue(args)
-
-    def test_handle_queue_resolve_missing_resolution(self):
-        args = MagicMock()
-        args.action = "resolve"
-        args.item = "ITEM-001"
-        args.resolution = None
-
-        with pytest.raises(ValueError, match="--resolution required"):
-            handle_queue(args)
-
-
-class TestHandleAudit:
-    def test_handle_audit_export(self):
-        args = MagicMock()
-        args.action = "export"
-        args.run = None
-
-        result = handle_audit(args)
-        assert "packets" in result
-
-    def test_handle_audit_generate_missing_task(self):
-        args = MagicMock()
-        args.action = "generate"
-        args.task = None
-        args.run = "RUN-001"
-
-        with pytest.raises(ValueError, match="--task required"):
-            handle_audit(args)
-
-    def test_handle_audit_generate_with_task(self):
-        args = MagicMock()
-        args.action = "generate"
-        args.task = "TASK-001"
-        args.run = "RUN-001"
-
-        result = handle_audit(args)
-        assert "audit_packet_id" in result
-        assert "trace_id" in result
-
-
-class TestOutputResult:
-    def test_output_json(self, capsys):
-        result = {"key": "value", "list": [1, 2, 3]}
-        output_result(result, "json")
-
-        captured = capsys.readouterr()
-        output = json.loads(captured.out)
-        assert output["key"] == "value"
-
-    def test_output_text_simple(self, capsys):
-        result = {"key": "value"}
-        output_result(result, "text")
-
-        captured = capsys.readouterr()
-        assert "key: value" in captured.out
-
-    def test_output_text_with_list(self, capsys):
-        result = {"items": ["a", "b"]}
-        output_result(result, "text")
-
-        captured = capsys.readouterr()
-        assert "items:" in captured.out
-        assert "- a" in captured.out
-
-
-class TestHandleAuditUnknown:
-    def test_handle_audit_unknown_action(self):
-        args = MagicMock()
-        args.action = "unknown"
-
-        with pytest.raises(ValueError, match="Unknown audit action"):
-            handle_audit(args)
-
-
-class TestHandleQueueUnknown:
-    def test_handle_queue_unknown_action(self):
-        args = MagicMock()
-        args.action = "unknown"
-
-        with pytest.raises(ValueError, match="Unknown queue action"):
-            handle_queue(args)

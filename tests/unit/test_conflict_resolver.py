@@ -6,8 +6,8 @@ Tests conflict detection, resolution strategies, and record management.
 
 from unittest.mock import MagicMock
 
-from src.common import utc_now
-from src.core.conflict_resolver import (
+from agent_state_gate.common import utc_now
+from agent_state_gate.core.conflict_resolver import (
     ConflictRecord,
     ConflictResolver,
     ConflictType,
@@ -15,7 +15,7 @@ from src.core.conflict_resolver import (
     ResolutionStrategy,
     resolve_assessments,
 )
-from src.core.verdict_transformer import Verdict
+from agent_state_gate.core.verdict_transformer import Verdict
 
 
 class TestConflictType:
@@ -359,7 +359,7 @@ class TestConflictResolverTimestamp:
         assessment_b.stale_summary = MagicMock(fresh=False)
 
         # Create conflict manually
-        from src.core.conflict_resolver import ConflictRecord
+        from agent_state_gate.core.conflict_resolver import ConflictRecord
         conflict = ConflictRecord(
             conflict_id="CF-TIME",
             conflict_type=ConflictType.STALE_VS_FRESH,

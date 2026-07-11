@@ -1,7 +1,17 @@
 # Gate Configuration Template
 
-version: 0.1.0
-environment: local  # local | ci | staging | production
+version: 0.5.0
+runtime_profile: local_advisory  # local_advisory | ci_contract | staging_enforce | production_shadow | production_enforce
+
+database:
+  url: "${AGENT_STATE_GATE_DATABASE_URL:-sqlite:///agent-state-gate.db}"
+  echo: false
+
+oidc:
+  enabled: false
+  issuer: null
+  audience: null
+  jwks_url: null
 
 # Adapter Configuration
 adapters:
@@ -13,13 +23,13 @@ adapters:
 
   taskstate:
     enabled: true
-    endpoint: "${AGENT_TASKSTATE_URL:-http://localhost:8081}"
+    command: "${AGENT_TASKSTATE_COMMAND:-agent-taskstate}"
     timeout_ms: 3000
     failure_policy: "fail-closed"
 
   protocols:
     enabled: true
-    schema_path: "${AGENT_PROTOCOLS_SCHEMAS:-../agent-protocols/schemas}"
+    schemas_path: "${AGENT_PROTOCOLS_SCHEMAS:-../agent-protocols/schemas}"
     timeout_ms: 2000
     failure_policy: "needs-approval"
 
@@ -37,7 +47,7 @@ adapters:
 
   workflow:
     enabled: true
-    docs_path: "${WORKFLOW_COOKBOOK_PATH:-../workflow-cookbook}"
+    cookbook_path: "${WORKFLOW_COOKBOOK_PATH:-../workflow-cookbook}"
     timeout_ms: 2000
     failure_policy: "needs-approval"
 

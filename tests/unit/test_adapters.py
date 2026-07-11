@@ -5,24 +5,25 @@ Tests GatefieldAdapter, TaskstateAdapter, ProtocolsAdapter,
 MemxAdapter, ShipyardAdapter, WorkflowAdapter, and AdapterRegistry.
 """
 
+import json
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from src.adapters.base import (
+from agent_state_gate.adapters.base import (
     EvidenceNotFoundError,
     FailurePolicy,
     OperationMode,
     SchemaValidationError,
 )
-from src.adapters.gatefield_adapter import GatefieldAdapter, GatefieldConfig
-from src.adapters.memx_adapter import MemxAdapter, MemxConfig
-from src.adapters.protocols_adapter import ProtocolsAdapter, ProtocolsConfig
-from src.adapters.registry import AdapterRegistry
-from src.adapters.shipyard_adapter import ShipyardAdapter, ShipyardConfig
-from src.adapters.taskstate_adapter import TaskstateAdapter, TaskstateConfig
-from src.adapters.workflow_adapter import WorkflowAdapter, WorkflowConfig
+from agent_state_gate.adapters.gatefield_adapter import GatefieldAdapter, GatefieldConfig
+from agent_state_gate.adapters.memx_adapter import MemxAdapter, MemxConfig
+from agent_state_gate.adapters.protocols_adapter import ProtocolsAdapter, ProtocolsConfig
+from agent_state_gate.adapters.registry import AdapterRegistry
+from agent_state_gate.adapters.shipyard_adapter import ShipyardAdapter, ShipyardConfig
+from agent_state_gate.adapters.taskstate_adapter import TaskstateAdapter, TaskstateConfig
+from agent_state_gate.adapters.workflow_adapter import WorkflowAdapter, WorkflowConfig
 
 # === GatefieldAdapter Tests ===
 
@@ -56,6 +57,14 @@ class TestGatefieldAdapterMetadata:
 
 
 class TestGatefieldAdapterHealthCheck:
+    def test_api_key_is_loaded_only_from_environment(self, monkeypatch):
+        monkeypatch.setenv("AGENT_GATEFIELD_API_KEY", "environment-secret")
+        adapter = GatefieldAdapter({"api_key": "ignored-yaml-secret"})
+        assert adapter._session.headers["X-API-Key"] == "environment-secret"
+        monkeypatch.delenv("AGENT_GATEFIELD_API_KEY")
+        adapter = GatefieldAdapter({"api_key": "ignored-yaml-secret"})
+        assert "X-API-Key" not in adapter._session.headers
+
     def test_health_check_success(self):
         adapter = GatefieldAdapter()
         # Mock the session's get method
@@ -84,12 +93,34 @@ class TestGatefieldAdapterEvaluate:
         adapter._session.post = MagicMock(return_value=mock_response)
 
         result = adapter.evaluate(
-            artifact={"artifact_id": "ART-001", "artifact_ref": "", "diff_hash": ""},
+            artifact={
+                "artifact_id": "ART-001",
+                "artifact_ref": "",
+                "diff_hash": "",
+                "semantic_evidence": {
+                    "model": "BAAI/bge-m3", "dims": 2, "vector": [0.1, 0.2],
+                    "content_hash": "a" * 64, "producer": "test",
+                },
+            },
             trace={"run_id": "RUN-001", "trace_id": "TRACE-001", "context": {}}
         )
 
         assert result["decision_id"] == "DEC-001"
         assert result["decision"] == "pass"
+
+    def test_shared_v2_fixture_and_legacy_url_contract(self):
+        fixture = Path(__file__).parents[1] / "fixtures" / "gatefield_decision_packet_v2.json"
+        packet = json.loads(fixture.read_text(encoding="utf-8"))
+        assert {"evidence_status", "degraded_components", "request_id"} <= packet.keys()
+        adapter = GatefieldAdapter()
+        response = MagicMock(status_code=200)
+        response.raise_for_status.return_value = None
+        response.json.return_value = packet
+        adapter._session.post = MagicMock(return_value=response)
+        result = adapter.evaluate(gatefield_semantic_artifact(), {"run_id": "RUN-CONTRACT-V2"})
+        assert result["schema_version"] == "2.0.0"
+        called_url = adapter._session.post.call_args.args[0]
+        assert called_url.endswith("/v1/evaluate")
 
 
 # === TaskstateAdapter Tests ===
@@ -123,13 +154,13 @@ class TestTaskstateAdapterMetadata:
 
 
 class TestTaskstateAdapterHealthCheck:
-    @patch("src.adapters.taskstate_adapter.subprocess.run")
+    @patch("agent_state_gate.adapters.taskstate_adapter.subprocess.run")
     def test_health_check_success(self, mock_run):
         mock_run.return_value.returncode = 0
         adapter = TaskstateAdapter()
         assert adapter.health_check() is True
 
-    @patch("src.adapters.taskstate_adapter.subprocess.run")
+    @patch("agent_state_gate.adapters.taskstate_adapter.subprocess.run")
     def test_health_check_failure(self, mock_run):
         mock_run.side_effect = Exception("CLI not found")
         adapter = TaskstateAdapter()
@@ -412,7 +443,7 @@ class TestGatefieldAdapterEnqueueReview:
         mock_response = MagicMock()
         mock_response.status_code = 503
         adapter._session.post = MagicMock(return_value=mock_response)
-        from src.adapters.base import AdapterUnavailableError
+        from agent_state_gate.adapters.base import AdapterUnavailableError
         with pytest.raises(AdapterUnavailableError):
             adapter.enqueue_review({"decision_id": "DEC-001"})
 
@@ -445,7 +476,7 @@ class TestGatefieldAdapterGetDecisionPacket:
         mock_response = MagicMock()
         mock_response.status_code = 404
         adapter._session.get = MagicMock(return_value=mock_response)
-        from src.adapters.base import DecisionNotFoundError
+        from agent_state_gate.adapters.base import DecisionNotFoundError
         with pytest.raises(DecisionNotFoundError):
             adapter.get_decision_packet("DEC-UNKNOWN")
 
@@ -465,7 +496,7 @@ class TestGatefieldAdapterGetStateVector:
 # === Additional TaskstateAdapter Tests ===
 
 class TestTaskstateAdapterGetTask:
-    @patch("src.adapters.taskstate_adapter.subprocess.run")
+    @patch("agent_state_gate.adapters.taskstate_adapter.subprocess.run")
     def test_get_task_returns_task(self, mock_run):
         mock_result = MagicMock()
         mock_result.returncode = 0
@@ -478,7 +509,7 @@ class TestTaskstateAdapterGetTask:
 
 
 class TestTaskstateAdapterGetRun:
-    @patch("src.adapters.taskstate_adapter.subprocess.run")
+    @patch("agent_state_gate.adapters.taskstate_adapter.subprocess.run")
     def test_get_run_returns_run(self, mock_run):
         mock_result = MagicMock()
         mock_result.returncode = 0
@@ -491,7 +522,7 @@ class TestTaskstateAdapterGetRun:
 
 
 class TestTaskstateAdapterGetContextBundle:
-    @patch("src.adapters.taskstate_adapter.subprocess.run")
+    @patch("agent_state_gate.adapters.taskstate_adapter.subprocess.run")
     def test_get_context_bundle_returns_bundle(self, mock_run):
         mock_result = MagicMock()
         mock_result.returncode = 0
@@ -704,18 +735,18 @@ class TestShipyardAdapterGetWorkerCapabilities:
 
 class TestRegistryInitialize:
     def test_initialize_empty_config(self):
-        from src.adapters.registry import initialize_adapters
+        from agent_state_gate.adapters.registry import initialize_adapters
         registry = initialize_adapters({})
         assert len(registry.get_all()) == 0
 
     def test_initialize_with_gatefield_enabled(self):
-        from src.adapters.registry import initialize_adapters
+        from agent_state_gate.adapters.registry import initialize_adapters
         config = {"adapters": {"gatefield": {"enabled": True}}}
         registry = initialize_adapters(config)
         assert registry.get("gatefield") is not None
 
     def test_initialize_with_multiple_adapters(self):
-        from src.adapters.registry import initialize_adapters
+        from agent_state_gate.adapters.registry import initialize_adapters
         config = {
             "adapters": {
                 "gatefield": {"enabled": True},
@@ -805,14 +836,14 @@ class TestMemxAdapterStaleCheckFresh:
 class TestMemxAdapterErrorHandling:
     def test_resolve_docs_raises_on_error(self):
         adapter = MemxAdapter({"base_url": "http://localhost:8000"})
-        from src.adapters.base import AdapterUnavailableError
+        from agent_state_gate.adapters.base import AdapterUnavailableError
         adapter._http_call = MagicMock(side_effect=AdapterUnavailableError("memx", "connection failed"))
         with pytest.raises(AdapterUnavailableError):
             adapter.resolve_docs("TASK-001", "edit_repo")
 
     def test_stale_check_raises_on_error(self):
         adapter = MemxAdapter({"base_url": "http://localhost:8000"})
-        from src.adapters.base import AdapterUnavailableError, StaleCheckError
+        from agent_state_gate.adapters.base import AdapterUnavailableError, StaleCheckError
         adapter._http_call = MagicMock(side_effect=AdapterUnavailableError("memx", "connection failed"))
         with pytest.raises(StaleCheckError):
             adapter.stale_check("TASK-001")
@@ -858,7 +889,7 @@ class TestWorkflowAdapterAdditional:
         import os
         import tempfile
 
-        from src.adapters.base import AdapterUnavailableError
+        from agent_state_gate.adapters.base import AdapterUnavailableError
         with tempfile.TemporaryDirectory() as tmpdir:
             repo_path = tmpdir
             birdseye_dir = os.path.join(repo_path, "birdseye")
@@ -878,7 +909,7 @@ class TestWorkflowAdapterAdditional:
         import os
         import tempfile
 
-        from src.adapters.base import AdapterUnavailableError
+        from agent_state_gate.adapters.base import AdapterUnavailableError
         with tempfile.TemporaryDirectory() as tmpdir:
             repo_path = tmpdir
             birdseye_dir = os.path.join(repo_path, "birdseye")
@@ -945,7 +976,7 @@ class TestWorkflowAdapterAdditional:
         import os
         import tempfile
 
-        from src.adapters.base import AdapterUnavailableError
+        from agent_state_gate.adapters.base import AdapterUnavailableError
         with tempfile.TemporaryDirectory() as tmpdir:
             cache_dir = os.path.join(tmpdir, ".workflow-cache")
             os.makedirs(cache_dir)
@@ -969,7 +1000,7 @@ class TestWorkflowAdapterAdditional:
         import os
         import tempfile
 
-        from src.adapters.base import AdapterUnavailableError, EvidenceNotFoundError
+        from agent_state_gate.adapters.base import AdapterUnavailableError, EvidenceNotFoundError
         with tempfile.TemporaryDirectory() as tmpdir:
             cache_dir = os.path.join(tmpdir, ".workflow-cache")
             os.makedirs(cache_dir)
@@ -988,7 +1019,7 @@ class TestWorkflowAdapterAdditional:
         import os
         import tempfile
 
-        from src.adapters.base import AdapterUnavailableError
+        from agent_state_gate.adapters.base import AdapterUnavailableError
         with tempfile.TemporaryDirectory() as tmpdir:
             codemap_dir = os.path.join(tmpdir, "codemap")
             os.makedirs(codemap_dir)
@@ -1007,7 +1038,7 @@ class TestWorkflowAdapterAdditional:
         import os
         import tempfile
 
-        from src.adapters.base import AdapterUnavailableError
+        from agent_state_gate.adapters.base import AdapterUnavailableError
         with tempfile.TemporaryDirectory() as tmpdir:
             codemap_dir = os.path.join(tmpdir, "codemap")
             os.makedirs(codemap_dir)
@@ -1061,7 +1092,7 @@ class TestTaskstateAdapterMethods:
     def test_get_task_not_found(self):
         """Get task raises TaskNotFoundError when not found."""
         adapter = TaskstateAdapter()
-        from src.adapters.base import AdapterUnavailableError, TaskNotFoundError
+        from agent_state_gate.adapters.base import AdapterUnavailableError, TaskNotFoundError
         adapter._run_cli = MagicMock(side_effect=AdapterUnavailableError("taskstate", "task TASK-001 not found"))
         with pytest.raises(TaskNotFoundError):
             adapter.get_task("TASK-001")
@@ -1069,7 +1100,7 @@ class TestTaskstateAdapterMethods:
     def test_get_run_not_found(self):
         """Get run raises RunNotFoundError when not found."""
         adapter = TaskstateAdapter()
-        from src.adapters.base import AdapterUnavailableError, RunNotFoundError
+        from agent_state_gate.adapters.base import AdapterUnavailableError, RunNotFoundError
         adapter._run_cli = MagicMock(side_effect=AdapterUnavailableError("taskstate", "run RUN-001 not found"))
         with pytest.raises(RunNotFoundError):
             adapter.get_run("RUN-001")
@@ -1077,7 +1108,7 @@ class TestTaskstateAdapterMethods:
     def test_get_context_bundle_not_found(self):
         """Get context bundle raises BundleNotFoundError when not found."""
         adapter = TaskstateAdapter()
-        from src.adapters.base import AdapterUnavailableError, BundleNotFoundError
+        from agent_state_gate.adapters.base import AdapterUnavailableError, BundleNotFoundError
         adapter._run_cli = MagicMock(side_effect=AdapterUnavailableError("taskstate", "bundle BND-001 not found"))
         with pytest.raises(BundleNotFoundError):
             adapter.get_context_bundle("BND-001")
@@ -1106,7 +1137,7 @@ class TestTaskstateAdapterMethods:
     def test_list_decisions_not_found(self):
         """List decisions raises TaskNotFoundError when task not found."""
         adapter = TaskstateAdapter()
-        from src.adapters.base import AdapterUnavailableError, TaskNotFoundError
+        from agent_state_gate.adapters.base import AdapterUnavailableError, TaskNotFoundError
         adapter._run_cli = MagicMock(side_effect=AdapterUnavailableError("taskstate", "task TASK-001 not found"))
         with pytest.raises(TaskNotFoundError):
             adapter.list_decisions("TASK-001")
@@ -1122,7 +1153,7 @@ class TestTaskstateAdapterMethods:
     def test_run_cli_nonzero_returncode(self):
         """_run_cli raises on nonzero returncode."""
         adapter = TaskstateAdapter()
-        from src.adapters.base import AdapterUnavailableError
+        from agent_state_gate.adapters.base import AdapterUnavailableError
         with patch("subprocess.run") as mock_run:
             mock_run.return_value = MagicMock(
                 returncode=1,
@@ -1136,7 +1167,7 @@ class TestTaskstateAdapterMethods:
         adapter = TaskstateAdapter()
         import subprocess
 
-        from src.adapters.base import AdapterUnavailableError
+        from agent_state_gate.adapters.base import AdapterUnavailableError
         with patch("subprocess.run") as mock_run:
             mock_run.side_effect = subprocess.TimeoutExpired("cmd", 30)
             with pytest.raises(AdapterUnavailableError):
@@ -1145,7 +1176,7 @@ class TestTaskstateAdapterMethods:
     def test_run_cli_json_decode_error(self):
         """_run_cli raises on JSON decode error."""
         adapter = TaskstateAdapter()
-        from src.adapters.base import AdapterUnavailableError
+        from agent_state_gate.adapters.base import AdapterUnavailableError
         with patch("subprocess.run") as mock_run:
             mock_run.return_value = MagicMock(
                 returncode=0,
@@ -1221,7 +1252,7 @@ class TestMemxAdapterCLIAckReads:
     def test_ack_reads_cli_raises_ack_failed(self):
         """Ack reads via CLI raises AckFailedError on failure."""
         adapter = MemxAdapter({"cli_path": "/usr/bin/memx", "use_http": False})
-        from src.adapters.base import AckFailedError, AdapterUnavailableError
+        from agent_state_gate.adapters.base import AckFailedError, AdapterUnavailableError
         adapter._cli_call = MagicMock(side_effect=AdapterUnavailableError("memx", "error"))
         with pytest.raises(AckFailedError):
             adapter.ack_reads("TASK-001", "DOC-001", "v1", ["chunk-1"])
@@ -1238,7 +1269,7 @@ class TestMemxAdapterCLIStaleCheck:
     def test_stale_check_cli_raises_error(self):
         """Stale check via CLI raises StaleCheckError on failure."""
         adapter = MemxAdapter({"cli_path": "/usr/bin/memx", "use_http": False})
-        from src.adapters.base import AdapterUnavailableError, StaleCheckError
+        from agent_state_gate.adapters.base import AdapterUnavailableError, StaleCheckError
         adapter._cli_call = MagicMock(side_effect=AdapterUnavailableError("memx", "error"))
         with pytest.raises(StaleCheckError):
             adapter.stale_check("TASK-001")
@@ -1268,7 +1299,7 @@ class TestMemxAdapterCliCall:
     def test_cli_call_nonzero_returncode_raises(self):
         """CLI call raises on nonzero returncode."""
         adapter = MemxAdapter({"cli_path": "/usr/bin/memx", "use_http": False})
-        from src.adapters.base import AdapterUnavailableError
+        from agent_state_gate.adapters.base import AdapterUnavailableError
         with patch("subprocess.run") as mock_run:
             mock_run.return_value = MagicMock(
                 returncode=1,
@@ -1282,7 +1313,7 @@ class TestMemxAdapterCliCall:
         adapter = MemxAdapter({"cli_path": "/usr/bin/memx", "use_http": False})
         import subprocess
 
-        from src.adapters.base import AdapterUnavailableError
+        from agent_state_gate.adapters.base import AdapterUnavailableError
         with patch("subprocess.run") as mock_run:
             mock_run.side_effect = subprocess.TimeoutExpired("cmd", 30)
             with pytest.raises(AdapterUnavailableError):
@@ -1291,7 +1322,7 @@ class TestMemxAdapterCliCall:
     def test_cli_call_json_decode_error_raises(self):
         """CLI call raises on JSON decode error."""
         adapter = MemxAdapter({"cli_path": "/usr/bin/memx", "use_http": False})
-        from src.adapters.base import AdapterUnavailableError
+        from agent_state_gate.adapters.base import AdapterUnavailableError
         with patch("subprocess.run") as mock_run:
             mock_run.return_value = MagicMock(
                 returncode=0,
@@ -1327,7 +1358,7 @@ class TestMemxAdapterHttpCall:
     def test_http_call_503_raises_unavailable(self):
         """HTTP 503 raises AdapterUnavailableError."""
         adapter = MemxAdapter({"base_url": "http://localhost:8000"})
-        from src.adapters.base import AdapterUnavailableError
+        from agent_state_gate.adapters.base import AdapterUnavailableError
         with patch.object(adapter._session, "get") as mock_get:
             mock_get.return_value = MagicMock(status_code=503)
             with pytest.raises(AdapterUnavailableError):
@@ -1336,7 +1367,7 @@ class TestMemxAdapterHttpCall:
     def test_http_call_404_raises_docs_not_found(self):
         """HTTP 404 raises DocsNotFoundError."""
         adapter = MemxAdapter({"base_url": "http://localhost:8000"})
-        from src.adapters.base import DocsNotFoundError
+        from agent_state_gate.adapters.base import DocsNotFoundError
         with patch.object(adapter._session, "get") as mock_get:
             mock_get.return_value = MagicMock(status_code=404)
             with pytest.raises(DocsNotFoundError):
@@ -1347,7 +1378,7 @@ class TestMemxAdapterHttpCall:
         adapter = MemxAdapter({"base_url": "http://localhost:8000"})
         import requests
 
-        from src.adapters.base import AdapterUnavailableError
+        from agent_state_gate.adapters.base import AdapterUnavailableError
         with patch.object(adapter._session, "get") as mock_get:
             mock_get.side_effect = requests.Timeout()
             with pytest.raises(AdapterUnavailableError):
@@ -1358,7 +1389,7 @@ class TestMemxAdapterHttpCall:
         adapter = MemxAdapter({"base_url": "http://localhost:8000"})
         import requests
 
-        from src.adapters.base import AdapterUnavailableError
+        from agent_state_gate.adapters.base import AdapterUnavailableError
         with patch.object(adapter._session, "get") as mock_get:
             mock_get.side_effect = requests.ConnectionError()
             with pytest.raises(AdapterUnavailableError):
@@ -1375,21 +1406,21 @@ class TestMemxAdapterNoSession:
     def test_resolve_docs_no_session_no_cli(self):
         """Resolve docs raises when no session or CLI."""
         adapter = MemxAdapter({"use_http": False})
-        from src.adapters.base import AdapterUnavailableError
+        from agent_state_gate.adapters.base import AdapterUnavailableError
         with pytest.raises(AdapterUnavailableError):
             adapter.resolve_docs("TASK-001", "edit_repo")
 
     def test_get_chunks_no_session_no_cli(self):
         """Get chunks raises when no session or CLI."""
         adapter = MemxAdapter({"use_http": False})
-        from src.adapters.base import AdapterUnavailableError
+        from agent_state_gate.adapters.base import AdapterUnavailableError
         with pytest.raises(AdapterUnavailableError):
             adapter.get_chunks("DOC-001", ["chunk-1"])
 
     def test_ack_reads_no_session_no_cli(self):
         """Ack reads raises when no session or CLI."""
         adapter = MemxAdapter({"use_http": False})
-        from src.adapters.base import AckFailedError
+        from agent_state_gate.adapters.base import AckFailedError
         with pytest.raises(AckFailedError):
             adapter.ack_reads("TASK-001", "DOC-001", "v1", ["chunk-1"])
 
@@ -1420,7 +1451,7 @@ class TestProtocolsAdapterAdditional:
     def test_derive_required_approvals_unknown_level(self):
         """Derive approvals for unknown risk level raises."""
         adapter = ProtocolsAdapter()
-        from src.adapters.base import SchemaValidationError
+        from agent_state_gate.adapters.base import SchemaValidationError
         with pytest.raises(SchemaValidationError):
             adapter.derive_required_approvals("unknown")
 
@@ -1433,21 +1464,21 @@ class TestProtocolsAdapterAdditional:
     def test_resolve_definition_of_done_not_found(self):
         """Resolve definition of done raises when schema not found."""
         adapter = ProtocolsAdapter()
-        from src.adapters.base import SchemaValidationError
+        from agent_state_gate.adapters.base import SchemaValidationError
         with pytest.raises(SchemaValidationError):
             adapter.resolve_definition_of_done("Nonexistent")
 
     def test_resolve_publish_requirements_not_found(self):
         """Resolve publish requirements raises when schema not found."""
         adapter = ProtocolsAdapter()
-        from src.adapters.base import SchemaValidationError
+        from agent_state_gate.adapters.base import SchemaValidationError
         with pytest.raises(SchemaValidationError):
             adapter.resolve_publish_requirements("nonexistent_target")
 
     def test_validate_contract_missing_required(self):
         """Validate contract raises when required field missing."""
         adapter = ProtocolsAdapter()
-        from src.adapters.base import SchemaValidationError
+        from agent_state_gate.adapters.base import SchemaValidationError
         # Create a mock schema with required fields
         adapter._schemas_path = MagicMock()
         adapter._schemas_path.exists = MagicMock(return_value=True)
@@ -1538,7 +1569,7 @@ class TestProtocolsAdapterAdditional:
             with open(schema_file, "w") as f:
                 f.write("not valid json")
             adapter._schemas_path = Path(tmpdir)
-            from src.adapters.base import SchemaValidationError
+            from agent_state_gate.adapters.base import SchemaValidationError
             with pytest.raises(SchemaValidationError):
                 adapter.resolve_definition_of_done("Intent")
 
@@ -1570,7 +1601,7 @@ class TestProtocolsAdapterAdditional:
             with open(schema_file, "w") as f:
                 f.write("not valid json")
             adapter._schemas_path = Path(tmpdir)
-            from src.adapters.base import SchemaValidationError
+            from agent_state_gate.adapters.base import SchemaValidationError
             with pytest.raises(SchemaValidationError):
                 adapter.resolve_publish_requirements("npm")
 
@@ -1698,14 +1729,14 @@ class TestShipyardAdapterAdditional:
     def test_hold_for_review_no_config(self):
         """Hold for review raises without config."""
         adapter = ShipyardAdapter()
-        from src.adapters.base import AdapterUnavailableError
+        from agent_state_gate.adapters.base import AdapterUnavailableError
         with pytest.raises(AdapterUnavailableError):
             adapter.hold_for_review("RUN-001", "ASM-001", "needs review")
 
     def test_resume_from_review_no_config(self):
         """Resume from review raises without config."""
         adapter = ShipyardAdapter()
-        from src.adapters.base import AdapterUnavailableError
+        from agent_state_gate.adapters.base import AdapterUnavailableError
         with pytest.raises(AdapterUnavailableError):
             adapter.resume_from_review("RUN-001", "HOLD-001", "approved")
 
@@ -1772,7 +1803,7 @@ class TestShipyardAdapterAdditional:
     def test_http_call_503_raises(self):
         """HTTP call 503 raises AdapterUnavailableError."""
         adapter = ShipyardAdapter({"base_url": "http://localhost:3000"})
-        from src.adapters.base import AdapterUnavailableError
+        from agent_state_gate.adapters.base import AdapterUnavailableError
         with patch.object(adapter._session, "get") as mock_get:
             mock_get.return_value = MagicMock(status_code=503)
             with pytest.raises(AdapterUnavailableError):
@@ -1781,7 +1812,7 @@ class TestShipyardAdapterAdditional:
     def test_http_call_404_without_task_raises_unavailable(self):
         """HTTP call 404 without task_id raises AdapterUnavailableError."""
         adapter = ShipyardAdapter({"base_url": "http://localhost:3000"})
-        from src.adapters.base import AdapterUnavailableError
+        from agent_state_gate.adapters.base import AdapterUnavailableError
         with patch.object(adapter._session, "get") as mock_get:
             mock_get.return_value = MagicMock(status_code=404)
             with pytest.raises(AdapterUnavailableError):
@@ -1790,7 +1821,7 @@ class TestShipyardAdapterAdditional:
     def test_http_call_404_with_task_raises_stage_not_found(self):
         """HTTP call 404 with task_id raises StageNotFoundError."""
         adapter = ShipyardAdapter({"base_url": "http://localhost:3000"})
-        from src.adapters.base import StageNotFoundError
+        from agent_state_gate.adapters.base import StageNotFoundError
         with patch.object(adapter._session, "get") as mock_get:
             mock_get.return_value = MagicMock(status_code=404)
             with pytest.raises(StageNotFoundError):
@@ -1799,7 +1830,7 @@ class TestShipyardAdapterAdditional:
     def test_http_call_409_raises_transition_not_allowed(self):
         """HTTP call 409 raises TransitionNotAllowedError."""
         adapter = ShipyardAdapter({"base_url": "http://localhost:3000"})
-        from src.adapters.base import TransitionNotAllowedError
+        from agent_state_gate.adapters.base import TransitionNotAllowedError
         with patch.object(adapter._session, "post") as mock_post:
             mock_post.return_value = MagicMock(
                 status_code=409,
@@ -1813,7 +1844,7 @@ class TestShipyardAdapterAdditional:
         adapter = ShipyardAdapter({"base_url": "http://localhost:3000"})
         import requests
 
-        from src.adapters.base import AdapterUnavailableError
+        from agent_state_gate.adapters.base import AdapterUnavailableError
         with patch.object(adapter._session, "get") as mock_get:
             mock_get.side_effect = requests.Timeout()
             with pytest.raises(AdapterUnavailableError):
@@ -1824,11 +1855,22 @@ class TestShipyardAdapterAdditional:
         adapter = ShipyardAdapter({"base_url": "http://localhost:3000"})
         import requests
 
-        from src.adapters.base import AdapterUnavailableError
+        from agent_state_gate.adapters.base import AdapterUnavailableError
         with patch.object(adapter._session, "get") as mock_get:
             mock_get.side_effect = requests.ConnectionError()
             with pytest.raises(AdapterUnavailableError):
                 adapter._http_call("GET", "http://localhost:3000/v1/test")
+
+def gatefield_semantic_artifact(artifact_id="ART-001"):
+    return {
+        "artifact_id": artifact_id,
+        "artifact_ref": "ref",
+        "diff_hash": "hash",
+        "semantic_evidence": {
+            "model": "BAAI/bge-m3", "dims": 2, "vector": [0.1, 0.2],
+            "content_hash": "a" * 64, "producer": "adapter-test",
+        },
+    }
 
     def test_http_call_unsupported_method_raises(self):
         """HTTP call unsupported method raises ValueError."""
@@ -1901,7 +1943,7 @@ class TestGatefieldAdapterAdditional:
                 json=lambda: {"decision_id": "DEC-001", "decision": "pass"}
             )
             result = adapter.evaluate(
-                {"artifact_id": "ART-001", "artifact_ref": "ref", "diff_hash": "hash"},
+                gatefield_semantic_artifact(),
                 {"run_id": "RUN-001", "trace_id": "TR-001"}
             )
             assert result["decision_id"] == "DEC-001"
@@ -1909,38 +1951,38 @@ class TestGatefieldAdapterAdditional:
     def test_evaluate_503_raises(self):
         """Evaluate 503 raises AdapterUnavailableError."""
         adapter = GatefieldAdapter({"base_url": "http://localhost:8080"})
-        from src.adapters.base import AdapterUnavailableError
+        from agent_state_gate.adapters.base import AdapterUnavailableError
         with patch.object(adapter._session, "post") as mock_post:
             mock_post.return_value = MagicMock(status_code=503)
             with pytest.raises(AdapterUnavailableError):
-                adapter.evaluate({}, {"run_id": "RUN-001"})
+                adapter.evaluate(gatefield_semantic_artifact(), {"run_id": "RUN-001"})
 
     def test_evaluate_timeout_raises(self):
         """Evaluate timeout raises AdapterUnavailableError."""
         adapter = GatefieldAdapter({"base_url": "http://localhost:8080"})
         import requests
 
-        from src.adapters.base import AdapterUnavailableError
+        from agent_state_gate.adapters.base import AdapterUnavailableError
         with patch.object(adapter._session, "post") as mock_post:
             mock_post.side_effect = requests.Timeout()
             with pytest.raises(AdapterUnavailableError):
-                adapter.evaluate({}, {"run_id": "RUN-001"})
+                adapter.evaluate(gatefield_semantic_artifact(), {"run_id": "RUN-001"})
 
     def test_evaluate_connection_error_raises(self):
         """Evaluate connection error raises AdapterUnavailableError."""
         adapter = GatefieldAdapter({"base_url": "http://localhost:8080"})
         import requests
 
-        from src.adapters.base import AdapterUnavailableError
+        from agent_state_gate.adapters.base import AdapterUnavailableError
         with patch.object(adapter._session, "post") as mock_post:
             mock_post.side_effect = requests.ConnectionError()
             with pytest.raises(AdapterUnavailableError):
-                adapter.evaluate({}, {"run_id": "RUN-001"})
+                adapter.evaluate(gatefield_semantic_artifact(), {"run_id": "RUN-001"})
 
     def test_enqueue_review_503_raises(self):
         """Enqueue review 503 raises AdapterUnavailableError."""
         adapter = GatefieldAdapter({"base_url": "http://localhost:8080"})
-        from src.adapters.base import AdapterUnavailableError
+        from agent_state_gate.adapters.base import AdapterUnavailableError
         with patch.object(adapter._session, "post") as mock_post:
             mock_post.return_value = MagicMock(status_code=503)
             with pytest.raises(AdapterUnavailableError):
@@ -1951,7 +1993,7 @@ class TestGatefieldAdapterAdditional:
         adapter = GatefieldAdapter({"base_url": "http://localhost:8080"})
         import requests
 
-        from src.adapters.base import AdapterUnavailableError
+        from agent_state_gate.adapters.base import AdapterUnavailableError
         with patch.object(adapter._session, "post") as mock_post:
             mock_post.side_effect = requests.Timeout()
             with pytest.raises(AdapterUnavailableError):
@@ -1960,7 +2002,7 @@ class TestGatefieldAdapterAdditional:
     def test_export_audit_503_raises(self):
         """Export audit 503 raises AdapterUnavailableError."""
         adapter = GatefieldAdapter({"base_url": "http://localhost:8080"})
-        from src.adapters.base import AdapterUnavailableError
+        from agent_state_gate.adapters.base import AdapterUnavailableError
         with patch.object(adapter._session, "get") as mock_get:
             mock_get.return_value = MagicMock(status_code=503)
             with pytest.raises(AdapterUnavailableError):
@@ -1971,7 +2013,7 @@ class TestGatefieldAdapterAdditional:
         adapter = GatefieldAdapter({"base_url": "http://localhost:8080"})
         import requests
 
-        from src.adapters.base import AdapterUnavailableError
+        from agent_state_gate.adapters.base import AdapterUnavailableError
         with patch.object(adapter._session, "get") as mock_get:
             mock_get.side_effect = requests.Timeout()
             with pytest.raises(AdapterUnavailableError):
@@ -1991,7 +2033,7 @@ class TestGatefieldAdapterAdditional:
     def test_get_decision_packet_404_raises(self):
         """Get decision packet 404 raises DecisionNotFoundError."""
         adapter = GatefieldAdapter({"base_url": "http://localhost:8080"})
-        from src.adapters.base import DecisionNotFoundError
+        from agent_state_gate.adapters.base import DecisionNotFoundError
         with patch.object(adapter._session, "get") as mock_get:
             mock_get.return_value = MagicMock(status_code=404)
             with pytest.raises(DecisionNotFoundError):
@@ -2000,7 +2042,7 @@ class TestGatefieldAdapterAdditional:
     def test_get_state_vector_503_raises(self):
         """Get state vector 503 raises AdapterUnavailableError."""
         adapter = GatefieldAdapter({"base_url": "http://localhost:8080"})
-        from src.adapters.base import AdapterUnavailableError
+        from agent_state_gate.adapters.base import AdapterUnavailableError
         with patch.object(adapter._session, "get") as mock_get:
             mock_get.return_value = MagicMock(status_code=503)
             with pytest.raises(AdapterUnavailableError):
@@ -2011,7 +2053,7 @@ class TestGatefieldAdapterAdditional:
         adapter = GatefieldAdapter({"base_url": "http://localhost:8080"})
         import requests
 
-        from src.adapters.base import AdapterUnavailableError
+        from agent_state_gate.adapters.base import AdapterUnavailableError
         with patch.object(adapter._session, "get") as mock_get:
             mock_get.side_effect = requests.Timeout()
             with pytest.raises(AdapterUnavailableError):
@@ -2026,7 +2068,7 @@ class TestGatefieldAdapterAdditional:
                 json=lambda: {"decision_id": "DEC-001"}
             )
             adapter.evaluate(
-                {"artifact_id": "ART-001"},
+                gatefield_semantic_artifact(),
                 {"run_id": "RUN-001"},
                 {"rule1": "result1"}
             )

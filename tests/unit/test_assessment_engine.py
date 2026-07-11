@@ -6,7 +6,7 @@ Reference: AC-002_assessment_assembly.json, architecture.md
 """
 
 
-from src.core import (
+from agent_state_gate.core import (
     ApprovalSummary,
     Assessment,
     AssessmentEngine,
@@ -17,7 +17,7 @@ from src.core import (
     ObligationSummary,
     StaleSummary,
 )
-from src.core.verdict_transformer import Verdict
+from agent_state_gate.core.verdict_transformer import Verdict
 
 
 class TestAssessmentStore:
@@ -342,7 +342,7 @@ class TestAssessmentEngineMethods:
         )
 
         # list_by_task uses typed_ref format
-        from src.typed_ref import task_ref
+        from agent_state_gate.typed_ref import task_ref
         assessments = engine.list_assessments_by_task(task_ref("01HTSK0001"))
         assert len(assessments) >= 1
 
@@ -375,7 +375,7 @@ class TestAssessmentEngineMethods:
             context_bundle=context_bundle,
         )
 
-        from src.typed_ref import assessment_ref
+        from agent_state_gate.typed_ref import assessment_ref
         retrieved = engine.get_assessment(assessment_ref(assessment.assessment_id))
         assert retrieved is not None
         assert retrieved.assessment_id == assessment.assessment_id
@@ -418,7 +418,7 @@ class TestAssessment:
 
     def test_assessment_creation(self):
         """Create assessment."""
-        from src.core.verdict_transformer import (
+        from agent_state_gate.core.verdict_transformer import (
             ApprovalSummary,
             EvidenceSummary,
             ObligationSummary,

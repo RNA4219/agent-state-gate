@@ -6,7 +6,7 @@ Tests BaseAdapter types, error classes, and metadata.
 
 import pytest
 
-from src.adapters.base import (
+from agent_state_gate.adapters.base import (
     AckFailedError,
     AdapterError,
     AdapterMetadata,

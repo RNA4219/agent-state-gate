@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 
 import pytest
 
-from src.core import (
+from agent_state_gate.core import (
     ApprovalSummary,
     Assessment,
     AssessmentEngine,
@@ -15,7 +15,7 @@ from src.core import (
     StaleSummary,
     Verdict,
 )
-from src.queue import HumanAttentionQueue
+from agent_state_gate.queue import HumanAttentionQueue
 
 
 @pytest.fixture
