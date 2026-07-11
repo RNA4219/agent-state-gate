@@ -1,0 +1,14 @@
+{
+  "schema_version": "HATE-bridge/v1",
+  "record_type": "bridge_request",
+  "bridge_id": "hate-bridge-aaaaaaaaaaaaaaaaaaaaaaaa",
+  "original_command": "platform triage",
+  "owner": "agent-state-gate",
+  "canonical_contract": "agent-state-gate/consumer/v1",
+  "status": "handoff_required",
+  "input_refs": [],
+  "expected_output_types": [
+    "legacy:platform-triage"
+  ],
+  "sourceRefs": []
+}
