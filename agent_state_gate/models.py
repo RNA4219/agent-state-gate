@@ -196,6 +196,13 @@ class ApprovalBinding(ContractModel):
     policy_version: str = Field(min_length=1)
     approved_roles: frozenset[str] = Field(default_factory=frozenset)
     expires_at: datetime | None = None
+    @field_validator("approved_roles", mode="before")
+    @classmethod
+    def normalize_approved_roles(cls, value: Any) -> frozenset[str]:
+        if isinstance(value, (set, frozenset, list, tuple)):
+            return frozenset(value)
+        return value
+
 
     @field_validator("diff_hash", "context_hash")
     @classmethod
@@ -214,12 +221,16 @@ class ApprovalBinding(ContractModel):
         policy_version: str,
         now: datetime | None = None,
     ) -> bool:
+        current_time = now or utc_now()
+        expires_at = self.expires_at
+        if expires_at is not None and expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=current_time.tzinfo)
         return (
             self.tenant_id == tenant_id
             and self.diff_hash == diff_hash
             and self.context_hash == context_hash
             and self.policy_version == policy_version
-            and (self.expires_at is None or self.expires_at > (now or utc_now()))
+            and (expires_at is None or expires_at > current_time)
         )
 
 

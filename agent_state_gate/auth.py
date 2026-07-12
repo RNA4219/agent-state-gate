@@ -68,7 +68,9 @@ class OIDCAuthenticator:
             raise AuthenticationError("OIDC token validation failed") from exc
         subject = claims.get(self._config.subject_claim)
         tenant_id = claims.get(self._config.tenant_claim)
-        raw_roles = claims.get(self._config.roles_claim, [])
+        if self._config.roles_claim not in claims:
+            raise AuthenticationError("OIDC roles claim is required")
+        raw_roles = claims[self._config.roles_claim]
         if subject is None or tenant_id is None:
             raise AuthenticationError("OIDC subject and tenant claims are required")
         if isinstance(raw_roles, str):

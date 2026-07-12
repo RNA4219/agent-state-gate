@@ -1,5 +1,7 @@
 # agent-state-gate
 
+[![CI](https://github.com/RNA4219/agent-state-gate/actions/workflows/ci.yml/badge.svg)](https://github.com/RNA4219/agent-state-gate/actions/workflows/ci.yml)
+
 `agent-state-gate` は、エージェントの作業を「進めてよいか」「人間の確認が必要か」「止めるべきか」に変換する統合 gate 層です。
 
 単体で新しい判定エンジンを作る repo ではありません。`agent-gatefield` の State-space Gate 判定、`agent-taskstate` の task/run/context、`memx-resolver` の stale 判定、`agent-protocols` の approval 契約、`workflow-cookbook` の Evidence を束ね、最終 verdict と監査証跡を作ります。
@@ -40,7 +42,7 @@
 
 ## MCP Surface
 
-MCP facade は `src/api/mcp_surface.py` にあります。
+MCP facade は `agent_state_gate/api/mcp/surface.py` にあります。MCP と CLI は同じ `GateService` を呼び出します。
 
 | Tool | 用途 |
 |---|---|
@@ -53,13 +55,13 @@ MCP facade は `src/api/mcp_surface.py` にあります。
 
 ## いまの実装状態
 
-v0.4.3 時点では、core / adapters / queue / audit / MCP facade / CLI の MVP 実装と unit tests が入っています。
+v0.5.0 では、tenant-scoped SQLAlchemy 永続化、OIDC 認証、fail-safe な GateService、監査・attested snapshot・Replay、CLI/MCP 共通 service container を提供します。
 
 注意点:
 
-- `gate evaluate` は adapter 接続がない場合、advisory mode の結果を返します。
-- production blocking mode には、実 `agent-gatefield` DecisionPacket 連携と PostgreSQL/pgvector backend の検証が必要です。
-- mock / in-memory は contract test とローカル開発用です。本番代替にはしません。
+- `local_advisory` と `ci_contract` はローカル/CI 用です。`staging_enforce` と `production_*` は PostgreSQL、OIDC、全 adapter 設定を要求します。
+- adapter 不明時は `allow` に倒れず、軸ごとの failure policy に従って `deny`、`stale_blocked`、`needs_approval`、`require_human` を返します。
+- 本番 shadow/enforce の段階展開と運用条件は [`docs/ROLLOUT.md`](docs/ROLLOUT.md) を、リリース前確認は [`docs/RELEASE_CHECKLIST.md`](docs/RELEASE_CHECKLIST.md) を参照してください。
 
 ## クイックスタート
 
@@ -78,11 +80,15 @@ uv run pytest
 uv run ruff check .
 ```
 
+## CI
+
+GitHub Actions の `CI Gate` は、Python 3.11–3.13の品質検証、PostgreSQL/pgvector上のmigrationとtenant/queue契約、wheel/sdist、production依存監査をまとめて検証します。個別jobが一つでも失敗すると `CI Gate` は失敗します。
+
 ## ディレクトリ構成
 
 ```text
 agent-state-gate/
-├── src/
+├── agent_state_gate/
 │   ├── core/       # Assessment engine, verdict transformer, conflict resolver
 │   ├── adapters/   # 既存 repo との接続 adapter
 │   ├── queue/      # Human Attention Queue

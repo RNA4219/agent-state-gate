@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import time
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from pydantic import ValidationError
@@ -472,6 +472,20 @@ class GateService:
                 "unavailable_axes": assessment.unavailable_axes,
             },
         )
+        if verdict in {Verdict.NEEDS_APPROVAL.value, Verdict.REQUIRE_HUMAN.value, Verdict.STALE_BLOCKED.value}:
+            self.database.enqueue_attention(
+                tenant_id=context.tenant_id,
+                payload={
+                    "assessment_id": assessment_id,
+                    "task_id": request.task_id,
+                    "run_id": request.run_id,
+                    "severity": risk_level.value,
+                    "required_role": required_approvals[0] if required_approvals else "governance_board",
+                    "status": "pending",
+                    "verdict": verdict,
+                    "reason": assessment.verdict_reason,
+                },
+            )
         return EvaluateResult(
             verdict=verdict,
             assessment_id=assessment_id,
@@ -591,6 +605,7 @@ class GateService:
         for applied_verdict in snapshot.get("failure_policy_applied", {}).values():
             verdict = self._more_restrictive(verdict, str(applied_verdict))
         return verdict
+
     def replay(
         self,
         run_id: str,
@@ -600,7 +615,9 @@ class GateService:
         self._require_context(context)
         snapshot = self.database.latest_snapshot(context.tenant_id, run_id)
         if snapshot is None:
-            return ReplayResult(run_id=run_id, status=ReplayStatus.UNAVAILABLE, details={"reason": "snapshot not found"})
+            return ReplayResult(
+                run_id=run_id, status=ReplayStatus.UNAVAILABLE, details={"reason": "snapshot not found"}
+            )
         snapshot_created_at = snapshot.created_at
         if snapshot_created_at.tzinfo is None:
             snapshot_created_at = snapshot_created_at.replace(tzinfo=UTC)

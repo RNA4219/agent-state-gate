@@ -8,10 +8,10 @@ from typing import Any
 
 from sqlalchemy import JSON, Boolean, DateTime, Integer, String, Text, create_engine, delete, select, text
 from sqlalchemy.engine import Engine
-from .typed_ref import parse_ref
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
 
 from .models import ApprovalBinding, AssessmentModel
+from .typed_ref import parse_ref
 
 
 class Base(DeclarativeBase):
@@ -157,7 +157,7 @@ class Database:
             row = session.get(AssessmentRow, (assessment_id, tenant_id))
             if row is None:
                 return None
-            return AssessmentModel.model_validate(row.payload)
+            return AssessmentModel.model_validate(row.payload, strict=False)
     def save_approval_binding(self, binding: ApprovalBinding) -> None:
         row = ApprovalBindingRow(
             approval_id=binding.approval_id,
@@ -215,7 +215,7 @@ class Database:
             .order_by(AssessmentRow.created_at)
         )
         with self.sessions() as session:
-            return [AssessmentModel.model_validate(row.payload) for row in session.scalars(statement)]
+            return [AssessmentModel.model_validate(row.payload, strict=False) for row in session.scalars(statement)]
 
     def save_snapshot(
         self,

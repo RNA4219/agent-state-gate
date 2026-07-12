@@ -218,35 +218,6 @@ def dispatch_command(args: argparse.Namespace) -> DispatchResult:
     payload, exit_code = _dispatch_command(args)
     return DispatchResult(payload, exit_code)
 
-def handle_gate(args: argparse.Namespace) -> dict[str, Any]:
-    action = getattr(args, "action", None)
-    if action == "assess":
-        return {"task_id": args.task, "assessments": []}
-    if action == "evaluate":
-        return {"task_id": args.task, "run_id": args.run, "status": "mock_evaluation"}
-    raise ValueError(f"Unknown gate action: {action}")
-
-def handle_queue(args: argparse.Namespace) -> dict[str, Any]:
-    action = getattr(args, "action", None)
-    if action == "list":
-        return {"items": []}
-    if action in {"take", "resolve"} and not getattr(args, "item", None):
-        raise ValueError("--item required")
-    if action == "resolve" and not getattr(args, "resolution", None):
-        raise ValueError("--resolution required")
-    if action in {"take", "resolve"}:
-        return {"item": args.item, "status": "updated"}
-    raise ValueError(f"Unknown queue action: {action}")
-
-def handle_audit(args: argparse.Namespace) -> dict[str, Any]:
-    action = getattr(args, "action", None)
-    if action == "export":
-        return {"packets": []}
-    if action == "generate":
-        if not getattr(args, "task", None):
-            raise ValueError("--task required")
-        return {"audit_packet_id": f"audit:{args.task}:{getattr(args, 'run', '')}", "trace_id": getattr(args, "run", "") or "local"}
-    raise ValueError(f"Unknown audit action: {action}")
 
 
 def main() -> None:

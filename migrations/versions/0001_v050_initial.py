@@ -84,14 +84,11 @@ def upgrade() -> None:
         "purge_manifests",
         sa.Column("manifest_id", sa.String(length=80), primary_key=True),
         sa.Column("executed_by", sa.String(length=255), nullable=False),
-
         sa.Column("cutoff_by_class", sa.JSON(), nullable=False),
         sa.Column("deleted_by_class", sa.JSON(), nullable=False),
         sa.Column("rationale", sa.Text(), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
     )
-
-
     _tenant_table(
         "approval_bindings",
         sa.Column("approval_id", sa.String(length=80), primary_key=True),
@@ -103,8 +100,8 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
     )
 
-def downgrade() -> None:
 
+def downgrade() -> None:
     op.drop_table("purge_manifests")
     op.drop_table("approval_bindings")
     op.drop_index("ix_snapshots_run", table_name="attested_snapshots")

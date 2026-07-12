@@ -62,7 +62,8 @@ class GatefieldAdapter(BaseAdapter):
                 f"{self._config.base_url}/v1/health",
                 timeout=self._config.timeout_seconds,
             )
-            payload = response.json() if isinstance(response.json(), dict) else {}
+            payload_raw = response.json()
+            payload = payload_raw if isinstance(payload_raw, dict) else {}
             backend = payload.get("backend", {}) if isinstance(payload.get("backend", {}), dict) else {}
             pgvector_ready = bool(
                 payload.get("pgvector_ready")

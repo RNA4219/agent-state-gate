@@ -117,3 +117,40 @@ def test_unknown_command_is_rejected() -> None:
         with pytest.raises(ValueError, match="unsupported command"):
             dispatch_command(args)
 
+
+def test_dispatch_state_assess_branch():
+    service = MagicMock()
+    service.assess_state.return_value = MagicMock(
+        model_dump=lambda mode: {"recommendation": "continue"}, recommendation="continue", human_queue_required=False
+    )
+    args = Namespace(command="gate", action="state-assess", run="RUN-1", stage="dev", artifact_ref=["a"], diff_hash="a" * 64, redacted_diff="redacted")
+    with patch("agent_state_gate.cli._runtime", return_value=_runtime(service)):
+        payload, code = dispatch_command(args)
+    assert payload["recommendation"] == "continue" and code == 0
+
+
+def test_dispatch_queue_take_and_resolve():
+    service = MagicMock()
+    service.database.take_attention.return_value = {"item_id": "Q-1"}
+    service.database.resolve_attention.return_value = {"item_id": "Q-1", "status": "resolved"}
+    with patch("agent_state_gate.cli._runtime", return_value=_runtime(service)):
+        take, take_code = dispatch_command(Namespace(command="queue", action="take", item="Q-1", reviewer="reviewer"))
+        resolved, resolve_code = dispatch_command(Namespace(command="queue", action="resolve", item="Q-1", reviewer="reviewer", resolution="approved", comment="ok"))
+    assert take["item_id"] == "Q-1" and resolved["status"] == "resolved" and take_code == resolve_code == 0
+
+
+def test_dispatch_audit_health_and_maintenance():
+    service = MagicMock()
+    service.database.list_audit_packets.return_value = [{"packet_id": "A-1"}]
+    service.health.return_value = MagicMock(model_dump=lambda mode: {"ready": True}, ready=True)
+    service.database.purge_expired.return_value = {"manifest_id": "PURGE-1"}
+    args = [
+        Namespace(command="audit", run=None),
+        Namespace(command="health", action="check"),
+        Namespace(command="maintenance", action="purge", rationale="test"),
+    ]
+    with patch("agent_state_gate.cli._runtime", return_value=_runtime(service)), patch("agent_state_gate.cli.require_role"):
+        audit, _ = dispatch_command(args[0])
+        health, _ = dispatch_command(args[1])
+        purge, _ = dispatch_command(args[2])
+    assert audit["packets"] and health["ready"] and purge["manifest_id"] == "PURGE-1"

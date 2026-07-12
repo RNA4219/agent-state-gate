@@ -3,6 +3,23 @@
 All notable changes to agent-state-gate will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+## [0.5.0] - 2026-07-12
+
+### Added - Production Integration Gate
+
+- `agent_state_gate` を公開パッケージへ移行し、`src` top-level import shimを1リリース維持
+- runtime profile、Pydantic設定、旧設定alias警告、fail-safe GateService、strict contract modelを追加
+- SQLAlchemy/Alembic tenant-scoped persistence、OIDC/JWKS認証、approval freshness、監査・snapshot・Replayを追加
+- CLI/MCPを共通serviceへ統一し、structured logging、OpenTelemetry metrics、Shadow/Enforce運用手順を追加
+- CI、Security、Contributing、release checklist、sdist/wheel package contractを追加
+- GitHub ActionsでPython 3.11–3.13、PostgreSQL/pgvector migration/runtime、package、dependency auditを実行し、`CI Gate`へ集約
+
+### Verified
+
+- 468 tests passed
+- coverage 90.69%
+- Ruff and mypy clean
+- Alembic SQLite head migration and package contract verified
 
 ## [0.4.3] - 2026-04-26
 

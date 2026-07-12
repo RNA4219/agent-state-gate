@@ -1,0 +1,141 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Quality / Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+      - name: Install locked dependencies
+        run: uv sync --locked --extra dev --python ${{ matrix.python-version }}
+      - name: Ruff
+        run: uv run ruff check agent_state_gate migrations tests tools
+      - name: Mypy
+        run: uv run mypy agent_state_gate src
+      - name: Tests and coverage
+        run: uv run pytest --cov=agent_state_gate --cov-report=term-missing --cov-fail-under=90 -q
+
+  postgresql:
+    name: PostgreSQL / migration and runtime
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: agent_state_gate
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d agent_state_gate"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      AGENT_STATE_GATE_DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/agent_state_gate
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+      - name: Install locked dependencies
+        run: uv sync --locked --extra dev --python 3.13
+      - name: Upgrade schema
+        run: uv run alembic upgrade head
+      - name: PostgreSQL and pgvector runtime contract
+        run: uv run pytest tests/integration/test_postgresql_runtime.py -q
+      - name: Downgrade and re-upgrade schema
+        run: |
+          uv run alembic downgrade base
+          uv run alembic upgrade head
+
+  package:
+    name: Package contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+      - name: Install locked dependencies
+        run: uv sync --locked --extra dev --python 3.13
+      - name: Build wheel and sdist
+        run: uv build
+      - name: Validate package contents
+        run: uv run python tools/ci/check_package_contents.py dist
+      - name: Import from built wheel
+        shell: bash
+        run: |
+          uv venv /tmp/agent-state-gate-package
+          uv pip install --python /tmp/agent-state-gate-package/bin/python dist/*.whl
+          /tmp/agent-state-gate-package/bin/python -W error::DeprecationWarning -c "import agent_state_gate; assert agent_state_gate.__version__ == '0.5.0'"
+          /tmp/agent-state-gate-package/bin/python -W ignore::DeprecationWarning -c "import src; assert src.__version__ == '0.5.0'"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: agent-state-gate-dist
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 14
+
+  security:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+      - name: Install locked dependencies
+        run: uv sync --locked --extra dev --python 3.13
+      - name: Export production dependencies
+        run: uv export --locked --no-dev --no-emit-project --no-hashes --output-file /tmp/requirements-audit.txt
+      - name: Audit production dependencies
+        run: uv run pip-audit --requirement /tmp/requirements-audit.txt
+
+  gate:
+    name: CI Gate
+    if: always()
+    needs: [quality, postgresql, package, security]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require every CI job to pass
+        env:
+          QUALITY_RESULT: ${{ needs.quality.result }}
+          POSTGRESQL_RESULT: ${{ needs.postgresql.result }}
+          PACKAGE_RESULT: ${{ needs.package.result }}
+          SECURITY_RESULT: ${{ needs.security.result }}
+        run: |
+          test "$QUALITY_RESULT" = success
+          test "$POSTGRESQL_RESULT" = success
+          test "$PACKAGE_RESULT" = success
+          test "$SECURITY_RESULT" = success

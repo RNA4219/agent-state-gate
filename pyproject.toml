@@ -51,6 +51,13 @@ exclude = [
     "/.ruff_cache",
     "/.venv",
     "/deep-research-report (9).md",
+    "/AGENTS.md",
+    "/BLUEPRINT.md",
+    "/GUARDRAILS.md",
+    "/HUB.codex.md",
+    "/TECH_DEBT_REGISTER.md",
+    "/docs/birdseye/**",
+    "/**/deep-research-report (9).md",
     "**/__pycache__",
     "**/*.pyc",
 ]
@@ -61,6 +68,7 @@ python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 addopts = "-v --tb=short"
+filterwarnings = ["ignore:Configuration key .* is deprecated:DeprecationWarning", "ignore::ResourceWarning"]
 
 [tool.coverage.run]
 source = ["agent_state_gate"]
