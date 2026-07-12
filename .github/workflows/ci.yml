@@ -28,6 +28,7 @@ jobs:
         with:
           enable-cache: true
           cache-dependency-glob: uv.lock
+          cache-suffix: quality-${{ matrix.python-version }}
       - name: Install locked dependencies
         run: uv sync --locked --extra dev --python ${{ matrix.python-version }}
       - name: Ruff
@@ -63,6 +64,7 @@ jobs:
         with:
           enable-cache: true
           cache-dependency-glob: uv.lock
+          cache-suffix: postgresql
       - name: Install locked dependencies
         run: uv sync --locked --extra dev --python 3.13
       - name: Upgrade schema
@@ -84,6 +86,7 @@ jobs:
         with:
           enable-cache: true
           cache-dependency-glob: uv.lock
+          cache-suffix: package
       - name: Install locked dependencies
         run: uv sync --locked --extra dev --python 3.13
       - name: Build wheel and sdist
@@ -114,6 +117,7 @@ jobs:
         with:
           enable-cache: true
           cache-dependency-glob: uv.lock
+          cache-suffix: security
       - name: Install locked dependencies
         run: uv sync --locked --extra dev --python 3.13
       - name: Export production dependencies
