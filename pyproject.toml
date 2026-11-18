@@ -11,9 +11,9 @@ authors = [
 
 dependencies = [
     "alembic>=1.13",
-    "opentelemetry-api>=1.24",
+    "opentelemetry-api>=1.45.2",
     "pydantic>=2.0",
-    "pyjwt[crypto]>=2.8",
+    "pyjwt[crypto]>=2.15.1",
     "psycopg[binary]>=3.1",
     "pyyaml>=6.0",
     "requests>=2.28",
