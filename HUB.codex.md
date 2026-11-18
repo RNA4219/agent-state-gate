@@ -55,11 +55,11 @@ next_review_due: 2026-05-26
 
 | 触る場所 | 先に読む |
 |---|---|
-| `src/core/*` | `docs/requirements.md`, `docs/architecture.md`, `config/gate_config.yaml` |
-| `src/adapters/*` | `docs/adapter_contract.md`, `GUARDRAILS.md` |
-| `src/api/mcp_surface.py` | `docs/api_spec.md`, `GUARDRAILS.md` |
-| `src/queue/*` | `docs/architecture.md`, `docs/requirements.md` |
-| `src/audit/*` | `docs/requirements.md`, `docs/EVALUATION.md` |
+| `src/policy.rs` | `docs/requirements.md`, `docs/architecture.md`, `config/gate_config.yaml` |
+| `src/adapters.rs` | `docs/adapter_contract.md`, `GUARDRAILS.md` |
+| `src/mcp.rs` | `docs/api_spec.md`, `GUARDRAILS.md` |
+| `src/db.rs` | `docs/architecture.md`, `docs/requirements.md` |
+| `src/db.rs` | `docs/requirements.md`, `docs/EVALUATION.md` |
 | CLI / tests | `README.md`, `docs/RUNBOOK.md`, `CHANGELOG.md` |
 
 ## 3. 正本境界
@@ -77,12 +77,12 @@ next_review_due: 2026-05-26
 
 | Surface | 実体 | 用途 |
 |---|---|---|
-| CLI | `src/cli.py` | local debug、queue/audit/gate の手動確認 |
-| MCP facade | `src/api/mcp_surface.py` | agent-context-mcp からの統合 gate 呼び出し |
-| Core | `src/core/*` | Assessment assembly、verdict 変換、衝突解決 |
-| Adapters | `src/adapters/*` | 外部 repo との契約境界 |
-| Queue | `src/queue/human_attention_queue.py` | 人間レビュー待ちの管理 |
-| Audit | `src/audit/*` | audit packet と evidence record |
+| CLI | `src/main.rs` | local debug、queue/audit/gate の手動確認 |
+| MCP facade | `src/mcp.rs` | agent-context-mcp からの統合 gate 呼び出し |
+| Core | `src/policy.rs` | Assessment assembly、verdict 変換、衝突解決 |
+| Adapters | `src/adapters.rs` | 外部 repo との契約境界 |
+| Queue | `src/db.rs` | 人間レビュー待ちの管理 |
+| Audit | `src/db.rs` | audit packet と evidence record |
 
 MCP surface の公開 tool:
 
@@ -126,7 +126,7 @@ critical static fail
 
 ## 6. 現在の状態
 
-v0.4.3 時点の実装状態:
+Rust版の実装範囲（Python v0.5のCLI・MCP契約に対応）
 
 - core engine 実装済み
 - adapters 実装済み
@@ -147,25 +147,25 @@ v0.4.3 時点の実装状態:
 | 依頼 | 入口 |
 |---|---|
 | README や説明をわかりやすくする | `README.md`, `AGENTS.md`, このファイル |
-| verdict 変換を直す | `src/core/verdict_transformer.py`, `tests/unit/test_verdict_transformer.py` |
-| Assessment を直す | `src/core/assessment_engine.py`, `tests/unit/test_assessment_engine.py` |
-| adapter 契約を直す | `docs/adapter_contract.md`, `src/adapters/*`, `tests/unit/test_adapters.py` |
-| MCP tool を直す | `docs/api_spec.md`, `src/api/mcp_surface.py`, `tests/unit/test_mcp_surface.py` |
-| queue を直す | `src/queue/human_attention_queue.py`, `tests/unit/test_human_attention_queue.py` |
-| audit / evidence を直す | `src/audit/*`, `tests/unit/test_audit_packet.py`, `tests/unit/test_evidence_recorder.py` |
+| verdict 変換を直す | `src/policy.rs`, `tests/unit/test_verdict_transformer.py` |
+| Assessment を直す | `src/service.rs`, `tests/unit/test_assessment_engine.py` |
+| adapter 契約を直す | `docs/adapter_contract.md`, `src/adapters.rs`, `tests/unit/test_adapters.py` |
+| MCP tool を直す | `docs/api_spec.md`, `src/mcp.rs`, `tests/unit/test_mcp_surface.py` |
+| queue を直す | `src/db.rs`, `tests/unit/test_human_attention_queue.py` |
+| audit / evidence を直す | `src/db.rs`, `tests/unit/test_audit_packet.py`, `tests/unit/test_evidence_recorder.py` |
 | 検収やリリース判断 | `docs/EVALUATION.md`, `docs/CHECKLISTS.md`, `docs/PRODUCT_ACCEPTANCE_REFACTOR.md` |
 
 ## 8. 確認コマンド
 
-標準:
+Rust版の確認
 
 ```bash
-uv run pytest
-uv run ruff check .
-uv run agent-state-gate --help
+cargo test --locked
+cargo clippy --locked --all-targets -- -D warnings
+cargo run --locked -- --help
 ```
 
-fallback:
+Python互換パッケージの確認
 
 ```bash
 pip install -e .

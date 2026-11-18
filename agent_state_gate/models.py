@@ -136,6 +136,14 @@ class DecisionPacket(ContractModel):
     self_correction_count: int = Field(default=0, ge=0)
     uncertainty_score: float = Field(default=0.0, ge=0.0, le=1.0)
 
+    @field_validator("created_at", mode="before")
+    @classmethod
+    def parse_wire_timestamp(cls, value: Any) -> Any:
+        # HTTP 応答・保存済み snapshot は、日時を ISO 8601 文字列で渡す。
+        if isinstance(value, str):
+            return datetime.fromisoformat(value)
+        return value
+
     @field_validator("decision")
     @classmethod
     def valid_decision(cls, value: str) -> str:

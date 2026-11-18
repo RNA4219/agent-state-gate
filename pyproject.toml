@@ -44,6 +44,9 @@ packages = ["agent_state_gate", "src"]
 
 [tool.hatch.build]
 exclude = [
+    "/src/*.rs",
+    "/src/*.sql",
+    "/target",
     "/.coverage",
     "/.ctg",
     "/.mypy_cache",

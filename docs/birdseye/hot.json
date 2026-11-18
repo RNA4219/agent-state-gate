@@ -10,7 +10,7 @@
       "reason": "エージェントが最初に読む repo 固有指示。正本境界、実装時の注意、確認コマンドを短く確認できる。",
       "caps": "docs/birdseye/caps/AGENTS.md.json",
       "edges": ["README.md", "HUB.codex.md", "GUARDRAILS.md", "docs/requirements.md"],
-      "last_verified_at": "2026-04-26T00:00:00Z"
+      "last_verified_at": "2026-11-18T00:00:00Z"
     },
     {
       "id": "README.md",
@@ -18,7 +18,7 @@
       "reason": "repo の目的、いつ使うか、正本境界、MCP surface、クイックスタートを最短で把握する入口。",
       "caps": "docs/birdseye/caps/README.md.json",
       "edges": ["AGENTS.md", "HUB.codex.md", "docs/requirements.md", "docs/RUNBOOK.md", "docs/EVALUATION.md"],
-      "last_verified_at": "2026-04-26T00:00:00Z"
+      "last_verified_at": "2026-11-18T00:00:00Z"
     },
     {
       "id": "HUB.codex.md",
@@ -26,7 +26,7 @@
       "reason": "エージェント向けの初動読み順、正本境界、作業領域別の入口、禁止事項を確認するハブ。",
       "caps": "docs/birdseye/caps/HUB.codex.md.json",
       "edges": ["AGENTS.md", "README.md", "GUARDRAILS.md", "docs/requirements.md", "docs/EVALUATION.md"],
-      "last_verified_at": "2026-04-26T00:00:00Z"
+      "last_verified_at": "2026-11-18T00:00:00Z"
     },
     {
       "id": "docs/requirements.md",
@@ -50,7 +50,7 @@
       "reason": "local/CI/staging/production の pgvector runtime と障害時挙動を定義。",
       "caps": "docs/birdseye/caps/docs.RUNBOOK.md.json",
       "edges": ["docs/requirements.md", "docs/CHECKLISTS.md"],
-      "last_verified_at": "2026-04-26T00:00:00Z"
+      "last_verified_at": "2026-11-18T00:00:00Z"
     },
     {
       "id": "GUARDRAILS.md",
