@@ -1,6 +1,6 @@
 """v0.5 production contract integration tests."""
 
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime, timedelta, timezone
 from unittest.mock import MagicMock
 
 import pytest
@@ -105,6 +105,38 @@ def test_gate_service_allow_replay_and_context_mismatch(tmp_path):
     assert result.verdict == "allow"
     assert service.replay("RUN-1", None, ctx()).status.value == "verified"
     assert service.replay("RUN-1", None, ctx("other")).status.value == "mismatch"
+
+
+def test_evaluate_ignores_unbound_roles_and_replays_legacy_snapshot(tmp_path):
+    adapters = registry()
+    adapters.unregister("protocols")
+    adapters.register(FakeAdapter("protocols", {"derive_risk_level": "high", "derive_required_approvals": ["lead"]}))
+    run = adapters.get("taskstate").get_run("RUN-1")
+    run["approved_roles"] = ["lead"]
+    service = create_gate_service(config(tmp_path), adapters)
+    request = GateEvaluationRequest(task_id="TASK-1", run_id="RUN-1", action="publish", diff_hash="a" * 64)
+    context = ctx()
+    pending = service.evaluate(request, context)
+    assert pending.verdict == "needs_approval"
+    assessment = service.database.get_assessment(context.tenant_id, pending.assessment_id)
+    binding = ApprovalBinding(
+        approval_id="AP-1", tenant_id=context.tenant_id, diff_hash=assessment.diff_hash,
+        context_hash=assessment.context_hash, policy_version=assessment.policy_version, approved_roles={"lead"},
+        expires_at=(datetime.now(UTC) - timedelta(minutes=1)).astimezone(timezone(timedelta(hours=9))),
+    )
+    service.database.save_approval_binding(binding)
+    assert service.evaluate(request, context).verdict == "needs_approval"
+    binding.expires_at = datetime.now(UTC) + timedelta(days=1)
+    service.database.save_approval_binding(binding)
+    assert service.replay(request.run_id, None, context).actual_verdict == "needs_approval"
+    assert service.evaluate(request, context).verdict == "allow"
+    request.diff_hash = "b" * 64
+    assert service.evaluate(request, context).verdict == "needs_approval"
+    snapshot = service.database.latest_snapshot(context.tenant_id, request.run_id).payload
+    assert service._recompute_snapshot_verdict(snapshot, context) == "needs_approval"
+    # 旧形式の snapshot は、承認必須化前に保存した当時の判定規則で再計算する。
+    del snapshot["context_payload"]["approvals"]["binding_version"]
+    assert service._recompute_snapshot_verdict(snapshot, context) == "allow"
 
 
 def test_missing_taskstate_is_deny(tmp_path):

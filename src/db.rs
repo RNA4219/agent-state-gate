@@ -174,6 +174,30 @@ impl Store {
                 .is_empty())
         })
     }
+    pub fn current_approval_roles(
+        &mut self,
+        tenant: &str,
+        diff: &str,
+        context: &str,
+        policy: &str,
+    ) -> Result<std::collections::BTreeSet<String>> {
+        self.transaction(false, |tx| {
+            let mut roles = std::collections::BTreeSet::new();
+            for row in tx.rows(
+                CURRENT_APPROVAL_ROLES,
+                &[
+                    Text(tenant),
+                    Text(diff),
+                    Text(context),
+                    Text(policy),
+                    Time(Utc::now()),
+                ],
+            )? {
+                roles.extend(serde_json::from_str::<Vec<String>>(&row[0])?);
+            }
+            Ok(roles)
+        })
+    }
     pub fn healthy(&mut self) -> bool {
         self.transaction(false, |tx| tx.rows("SELECT CAST(1 AS TEXT)", &[]))
             .is_ok()
@@ -395,6 +419,11 @@ const CURRENT_BINDING: &str = "
     FROM approval_bindings
     WHERE tenant_id=$1 AND approval_id=$2 AND diff_hash=$3 AND context_hash=$4 AND
         policy_version=$5 AND (expires_at IS NULL OR expires_at>$6)";
+
+const CURRENT_APPROVAL_ROLES: &str = "
+    SELECT CAST(approved_roles AS TEXT) FROM approval_bindings
+    WHERE tenant_id=$1 AND diff_hash=$2 AND context_hash=$3 AND policy_version=$4
+      AND (expires_at IS NULL OR expires_at>$5)";
 
 const INSERT_ASSESSMENT: &str = "
     INSERT INTO assessments(assessment_id, tenant_id, task_id, run_id, stage, final_verdict,

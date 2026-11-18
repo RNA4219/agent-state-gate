@@ -159,6 +159,10 @@ class Database:
                 return None
             return AssessmentModel.model_validate(row.payload, strict=False)
     def save_approval_binding(self, binding: ApprovalBinding) -> None:
+        expires_at = binding.expires_at
+        if expires_at is not None and expires_at.tzinfo is not None:
+            # SQLite の日時列はオフセットを保存しないため、比較と同じ UTC にそろえる。
+            expires_at = expires_at.astimezone(UTC)
         row = ApprovalBindingRow(
             approval_id=binding.approval_id,
             tenant_id=binding.tenant_id,
@@ -166,7 +170,7 @@ class Database:
             context_hash=binding.context_hash,
             policy_version=binding.policy_version,
             approved_roles=sorted(binding.approved_roles),
-            expires_at=binding.expires_at,
+            expires_at=expires_at,
             created_at=datetime.now(UTC),
         )
         with self.sessions.begin() as session:
@@ -207,6 +211,18 @@ class Database:
             policy_version=policy_version,
             now=now,
         )
+
+    def current_approval_roles(self, tenant_id: str, diff_hash: str, context_hash: str, policy_version: str) -> set[str]:
+        row = ApprovalBindingRow
+        statement = select(row.approved_roles).where(
+            row.tenant_id == tenant_id,
+            row.diff_hash == diff_hash,
+            row.context_hash == context_hash,
+            row.policy_version == policy_version,
+            row.expires_at.is_(None) | (row.expires_at > datetime.now(UTC)),
+        )
+        with self.sessions() as session:
+            return {role for roles in session.scalars(statement) for role in roles}
 
     def list_assessments_by_run(self, tenant_id: str, run_id: str) -> list[AssessmentModel]:
         statement = (
