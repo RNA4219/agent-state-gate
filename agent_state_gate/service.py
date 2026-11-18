@@ -357,9 +357,10 @@ class GateService:
                 unavailable_axes=unavailable_axes,
                 applied=applied,
             )
-            stage = str((run_data or {}).get("stage", "unknown"))
-        else:
-            stage = str((stage_raw or {}).get("stage", (run_data or {}).get("stage", "unknown")))
+        stage = stage_raw.get("stage") if isinstance(stage_raw, dict) else None
+        if not isinstance(stage, str):
+            run_stage = (run_data or {}).get("stage")
+            stage = run_stage if isinstance(run_stage, str) else "unknown"
 
         context_payload = {
             "tenant_id": context.tenant_id,
