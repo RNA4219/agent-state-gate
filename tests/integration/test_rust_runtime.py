@@ -31,7 +31,7 @@ def adapters(tmp_path):
     jwk = jwt.algorithms.RSAAlgorithm.to_jwk(key.public_key(), as_dict=True) | {"kid": "gate-test"}
     packet = json.loads((Path(__file__).parents[1] / "fixtures/gatefield_decision_packet_v2.json").read_text())
     packet.update(policy_version="0.5.0", decision="pass", factors=[{"name": "score", "value": 1e-5}])
-    state = {"packet": packet, "fresh": True}
+    state = {"packet": packet, "fresh": True, "stage": "dev"}
 
     class Handler(BaseHTTPRequestHandler):
         def reply(self, value):
@@ -46,7 +46,7 @@ def adapters(tmp_path):
             if path == "/v1/docs/stale-check":
                 self.reply({"fresh": state["fresh"]})
             elif path.startswith("/v1/tasks/"):
-                self.reply({"stage": "dev"})
+                self.reply({"stage": state["stage"]})
             elif path == "/v1/health":
                 self.reply({"pgvector_ready": True})
             elif path == "/jwks":
@@ -168,6 +168,44 @@ def test_oidc_and_postgresql_queue(tmp_path, adapters):
 
     with ThreadPoolExecutor(max_workers=4) as pool:
         assert sorted(pool.map(take, range(4))) == [0, 1, 1, 1]
+
+
+@pytest.mark.parametrize("first_python", [True, False], ids=["python-to-rust", "rust-to-python"])
+@pytest.mark.parametrize(("run_stage", "expected_stage"), [("dev", "dev"), (None, "unknown")])
+def test_null_shipyard_stage_shares_approval(tmp_path, adapters, first_python, run_stage, expected_stage):
+    cfg, state, _, _ = adapters
+    state["stage"] = None
+    run_json = json.dumps({"stage": run_stage})
+    (tmp_path / "run").write_text(f"print({run_json!r})", encoding="utf-8")
+    path = tmp_path / "gate.yaml"
+    path.write_text(yaml.safe_dump(cfg))
+    tenant = "stage-test"
+    args = ["--tenant", tenant, "gate", "evaluate", "--task", "T", "--run", "R",
+            "--capability", "publish_release", "--diff-hash", "a" * 64]
+    db = Database(cfg["database"]["url"])
+
+    def evaluate(python, code):
+        result = invoke(path, *args, python=python, code=code)
+        return db.get_assessment(tenant, result["assessment_id"])
+
+    try:
+        pending = evaluate(first_python, 2)
+        assert (pending.stage, pending.final_verdict) == (expected_stage, "needs_approval")
+        db.save_approval_binding(ApprovalBinding(
+            approval_id="stage-approval", tenant_id=tenant, diff_hash=pending.diff_hash,
+            context_hash=pending.context_hash, policy_version=pending.policy_version,
+            approved_roles={"project_lead", "security_reviewer"},
+        ))
+        approved = evaluate(not first_python, 0)
+        assert (approved.stage, approved.final_verdict) == (expected_stage, "allow")
+        assert approved.context_hash == pending.context_hash
+
+        state["stage"] = "publish"
+        changed = evaluate(not first_python, 2)
+        assert (changed.stage, changed.final_verdict) == ("publish", "needs_approval")
+        assert changed.context_hash != pending.context_hash
+    finally:
+        db.engine.dispose()
 
 
 @pytest.mark.parametrize("backend", ["sqlite", "postgresql"])
