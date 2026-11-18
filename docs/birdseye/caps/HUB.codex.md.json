@@ -2,10 +2,11 @@
   "id": "HUB.codex.md",
   "role": "navigation",
   "public_api": [],
-  "summary": "エージェント向けに、agent-state-gate の役割、初動読み順、正本境界、surface、実装状態、作業別入口、確認コマンド、禁止事項をまとめるハブ。",
+  "summary": "Rust版とPython互換パッケージの導線を含む。エージェント向けに、agent-state-gate の役割、初動読み順、正本境界、surface、実装状態、作業別入口、確認コマンド、禁止事項をまとめるハブ。",
   "deps_out": ["AGENTS.md", "README.md", "GUARDRAILS.md", "docs/requirements.md", "docs/RUNBOOK.md", "docs/EVALUATION.md", "docs/CHECKLISTS.md"],
   "deps_in": ["AGENTS.md", "README.md", "docs/BIRDSEYE.md"],
   "risks": ["古い Phase 未着手表現や実装状態と矛盾するロードマップを正本のように扱わない"],
   "tests": ["手動: HUB の参照先と docs/birdseye/index.json の node が対応することを確認"],
-  "generated_at": "2026-04-26"
+  "last_verified_at": "2026-11-18",
+  "generated_at": "2026-11-18"
 }

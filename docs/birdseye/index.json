@@ -4,17 +4,17 @@
     "AGENTS.md": {
       "role": "agent_instructions",
       "caps": "docs/birdseye/caps/AGENTS.md.json",
-      "mtime": "2026-04-26"
+      "mtime": "2026-11-18"
     },
     "README.md": {
       "role": "overview",
       "caps": "docs/birdseye/caps/README.md.json",
-      "mtime": "2026-04-26"
+      "mtime": "2026-11-18"
     },
     "HUB.codex.md": {
       "role": "navigation",
       "caps": "docs/birdseye/caps/HUB.codex.md.json",
-      "mtime": "2026-04-26"
+      "mtime": "2026-11-18"
     },
     "BLUEPRINT.md": {
       "role": "requirements",
@@ -34,7 +34,7 @@
     "docs/RUNBOOK.md": {
       "role": "operations",
       "caps": "docs/birdseye/caps/docs.RUNBOOK.md.json",
-      "mtime": "00001"
+      "mtime": "2026-11-18"
     },
     "docs/EVALUATION.md": {
       "role": "quality",

@@ -3,6 +3,11 @@
 All notable changes to agent-state-gate will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+## 未リリース
+
+- 統合判定、6つのMCPツール、確認キュー、監査、再現、保持期限処理をRustのCLIとライブラリに移植。SQLiteとPostgreSQLのv0.5スキーマを継続利用する。
+- Python互換パッケージで、HTTP応答と保存済みDecisionPacketのISO 8601日時を読み取れるようにした。
+
 ## [0.5.0] - 2026-07-12
 
 ### Added - Production Integration Gate

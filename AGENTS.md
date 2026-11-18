@@ -44,18 +44,15 @@
 
 ## よく触る場所
 
-- `src/core/assessment_engine.py`: Assessment の組み立て
-- `src/core/verdict_transformer.py`: verdict 変換
-- `src/core/conflict_resolver.py`: 衝突解決
-- `src/adapters/`: 外部 repo との接続
-- `src/queue/human_attention_queue.py`: Human Attention Queue
-- `src/audit/`: AuditPacket と Evidence recorder
-- `src/api/mcp_surface.py`: MCP facade
-- `src/cli.py`: CLI
+- `src/service.rs` でAssessment、監査記録、再現処理を組み立てる。
+- `src/policy.rs` に判定規則、`src/adapters.rs` に外部接続、`src/db.rs` に永続化とキュー操作がある。
+- Rust版の入口はCLIが `src/main.rs`、MCPが `src/mcp.rs`。Python互換APIは `agent_state_gate/` にある。
 
 ## 確認コマンド
 
 ```bash
+cargo test --locked
+cargo clippy --locked --all-targets -- -D warnings
 uv run pytest
 uv run ruff check .
 uv run agent-state-gate --help

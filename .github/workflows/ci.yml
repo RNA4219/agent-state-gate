@@ -69,6 +69,16 @@ jobs:
         run: uv sync --locked --extra dev --python 3.13
       - name: Upgrade schema
         run: uv run alembic upgrade head
+      - name: Rust のフォーマット・静的検査・テスト
+        run: |
+          cargo fmt --all -- --check
+          cargo clippy --locked --all-targets -- -D warnings
+          cargo test --locked
+          cargo build --locked
+      - name: Rust CLI と Python v0.5 の互換性
+        env:
+          AGENT_STATE_GATE_RUST_BIN: ${{ github.workspace }}/target/debug/agent-state-gate
+        run: uv run pytest tests/integration/test_rust_runtime.py -q
       - name: PostgreSQL and pgvector runtime contract
         run: uv run pytest tests/integration/test_postgresql_runtime.py -q
       - name: Downgrade and re-upgrade schema

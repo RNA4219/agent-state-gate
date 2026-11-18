@@ -42,7 +42,7 @@
 
 ## MCP Surface
 
-MCP facade は `agent_state_gate/api/mcp/surface.py` にあります。MCP と CLI は同じ `GateService` を呼び出します。
+RustのMCPファサードは `GateService::call_tool` です。MCPホストはツール名とJSON引数を渡します。CLIと同じ認証・判定・保存処理を使います。
 
 | Tool | 用途 |
 |---|---|
@@ -55,7 +55,7 @@ MCP facade は `agent_state_gate/api/mcp/surface.py` にあります。MCP と C
 
 ## いまの実装状態
 
-v0.5.0 では、tenant-scoped SQLAlchemy 永続化、OIDC 認証、fail-safe な GateService、監査・attested snapshot・Replay、CLI/MCP 共通 service container を提供します。
+Rust版はSQLiteとPostgreSQLに対応し、v0.5の設定と監査記録を引き継ぎます。ローカルではSQLite、本番ではPostgreSQLとOIDCを使います。
 
 注意点:
 
@@ -65,36 +65,30 @@ v0.5.0 では、tenant-scoped SQLAlchemy 永続化、OIDC 認証、fail-safe な
 
 ## クイックスタート
 
-```bash
-pip install -e .
-agent-state-gate --help
-agent-state-gate gate evaluate --task TASK-1 --run RUN-1 --output json
-pytest tests/
-```
-
-`uv` を使う場合:
+リポジトリのルートで実行します。
 
 ```bash
-uv run agent-state-gate --help
-uv run pytest
-uv run ruff check .
+cargo build --release --locked
+cargo run --locked -- --help
+cargo run --locked -- gate evaluate --task TASK-1 --run RUN-1 --output json
+cargo test --locked
 ```
+
+インストールには `cargo install --locked --path .` を使います。別のディレクトリから起動する場合は `--config` で設定ファイルを指定してください。`gate evaluate` の終了コードは、許可が `0`、修正・確認待ちが `2`、拒否が `3` です。外部adapterが未接続の場合は `unavailable_axes` に接続先が表示されます。
+
+Python互換パッケージは `pip install -e .` で利用できます。両方を導入した環境では、`cargo run --locked -- …` と `python -m agent_state_gate.cli …` で実装を選べます。外部のworkflow-cookbookに証跡の生成を依頼する場合は、そのリポジトリのPython実行環境を使います。
 
 ## CI
 
-GitHub Actions の `CI Gate` は、Python 3.11–3.13の品質検証、PostgreSQL/pgvector上のmigrationとtenant/queue契約、wheel/sdist、production依存監査をまとめて検証します。個別jobが一つでも失敗すると `CI Gate` は失敗します。
+GitHub Actions の `CI Gate` は、Rustのフォーマット・Clippy・テスト、Python版との相互運用、Python 3.11–3.13の品質検証、PostgreSQL/pgvector上のmigrationとtenant/queue契約、wheel/sdist、production依存監査をまとめて検証します。個別jobが一つでも失敗すると `CI Gate` は失敗します。
 
 ## ディレクトリ構成
 
 ```text
 agent-state-gate/
-├── agent_state_gate/
-│   ├── core/       # Assessment engine, verdict transformer, conflict resolver
-│   ├── adapters/   # 既存 repo との接続 adapter
-│   ├── queue/      # Human Attention Queue
-│   ├── audit/      # Audit packet と Evidence recorder
-│   ├── api/        # MCP facade
-│   └── common.py   # 共通 utility
+├── Cargo.toml
+├── src/             # RustのCLI・判定サービス・MCPファサード・DB
+├── agent_state_gate/ # v0.5のPython互換パッケージ
 ├── config/         # gate 設定
 ├── docs/           # 仕様、運用、検収、Birdseye
 ├── tests/          # unit tests と golden fixtures

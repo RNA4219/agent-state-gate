@@ -28,10 +28,10 @@ mock / in-memory は本番代替ではない。Production Shadow / Production En
 
 ## 3. Local Dev 手順
 
-1. 依存関係を入れる。
+1. リポジトリのルートでRust版CLIをビルドする。
 
 ```bash
-pip install -e .
+cargo build --release --locked
 ```
 
 2. Dockerized pgvector を使う場合は、`agent-gatefield` 側の Docker Compose を起動する。
@@ -45,7 +45,7 @@ docker compose up -d postgres
 
 ```bash
 cd ../agent-state-gate
-pytest tests/
+cargo test --locked
 ```
 
 4. Docker が使えない端末では mock / in-memory profile で contract test と UI / adapter 開発だけを行う。本番相当の gate 品質判定や Production Enforce 判定には使わない。
@@ -65,6 +65,8 @@ CI は次を必須にする。
 mock / in-memory のみで CI を通す場合は、DB 非依存 contract test として扱い、Production runtime readiness は未達にする。
 
 ## 5. Staging / Production 手順
+
+既存のv0.5データベースはそのまま指定する。新規PostgreSQL環境では `psql --single-transaction --set ON_ERROR_STOP=1 --dbname "$DATABASE_URL" --file src/schema.sql` でテーブルを作成できる。Alembicで管理する環境では `uv run alembic upgrade head` を使う。
 
 Production Shadow / Production Enforce に進む前に次を確認する。
 

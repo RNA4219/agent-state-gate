@@ -1,0 +1,33 @@
+[package]
+name = "agent-state-gate"
+version = "0.5.0"
+edition = "2024"
+license = "MIT"
+description = "エージェントの作業判定・確認キュー・監査を統合するゲート"
+repository = "https://github.com/RNA4219/agent-state-gate"
+include = [
+    "/src/*.rs", "/src/*.sql", "/Cargo.toml", "/Cargo.lock", "/README.md", "/LICENSE",
+    "/config/gate_config.yaml", "/tests/*.rs", "/tests/fixtures/gatefield_decision_packet_v2.json",
+]
+
+[dependencies]
+anyhow = "1"
+chrono = { version = "0.4", features = ["serde"] }
+clap = { version = "4", features = ["derive", "env"] }
+jsonwebtoken = "9"
+native-tls = "0.2"
+opentelemetry = { version = "0.31", default-features = false, features = ["metrics"] }
+postgres = { version = "0.19", features = ["with-chrono-0_4", "with-serde_json-1"] }
+postgres-native-tls = "0.5"
+reqwest = { version = "0.12", features = ["blocking", "json"] }
+rusqlite = { version = "0.37", features = ["bundled"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["float_roundtrip"] }
+serde_yaml = "0.9"
+sha2 = "0.10"
+uuid = { version = "1", features = ["v4"] }
+tempfile = "3"
+wait-timeout = "0.2"
+
+[dev-dependencies]
+tiny_http = "0.12"
