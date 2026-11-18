@@ -8,6 +8,7 @@ import threading
 import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
+from datetime import UTC, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
@@ -16,6 +17,9 @@ import jwt
 import pytest
 import yaml
 from cryptography.hazmat.primitives.asymmetric import rsa
+
+from agent_state_gate.models import ApprovalBinding
+from agent_state_gate.persistence import Database
 
 BINARY = os.getenv("AGENT_STATE_GATE_RUST_BIN")
 pytestmark = pytest.mark.skipif(not BINARY, reason="Rust CLI の検証には AGENT_STATE_GATE_RUST_BIN が必要")
@@ -164,3 +168,75 @@ def test_oidc_and_postgresql_queue(tmp_path, adapters):
 
     with ThreadPoolExecutor(max_workers=4) as pool:
         assert sorted(pool.map(take, range(4))) == [0, 1, 1, 1]
+
+
+@pytest.mark.parametrize("backend", ["sqlite", "postgresql"])
+def test_evaluate_requires_approval_for_current_diff_and_context(tmp_path, adapters, backend):
+    cfg, state, _, _ = adapters
+    if backend == "postgresql":
+        url = os.getenv("AGENT_STATE_GATE_DATABASE_URL", "")
+        if not url.startswith(("postgresql://", "postgresql+psycopg://")):
+            pytest.skip("テスト用 PostgreSQL が必要")
+        cfg["database"]["url"] = url
+    config_file = tmp_path / "binding.yaml"
+    config_file.write_text(yaml.safe_dump(cfg))
+    tenant = uuid.uuid4().hex
+    roles = ["project_lead", "security_reviewer"]
+    (tmp_path / "run").write_text(f"import json\nprint(json.dumps({{'stage':'dev', 'approved_roles':{roles!r}}}))")
+    db = Database(cfg["database"]["url"])
+    diff, changed_diff = "a" * 64, "b" * 64
+    first_python = backend == "postgresql"
+
+    def evaluate(python, digest, expected):
+        args = ["--tenant", tenant, "gate", "evaluate", "--task", "T", "--run", "R", "--capability", "publish_release"]
+        if digest is not None:
+            args.extend(["--diff-hash", digest])
+        result = invoke(config_file, *args, python=python, code={"allow": 0, "needs_approval": 2, "deny": 3}[expected])
+        assert result["verdict"] == expected
+        return db.get_assessment(tenant, result["assessment_id"])
+
+    def bind(identifier, assessment, approved, **overrides):
+        values = {"approval_id": identifier, "tenant_id": tenant, "diff_hash": assessment.diff_hash,
+                  "context_hash": assessment.context_hash, "policy_version": assessment.policy_version,
+                  "approved_roles": frozenset(approved)}
+        db.save_approval_binding(ApprovalBinding(**(values | overrides)))
+
+    try:
+        first = evaluate(first_python, diff, "needs_approval")
+        assert first.approval_summary["missing_approvals"] == roles
+        bind("cross-tenant", first, roles, tenant_id=tenant + "-other")
+        bind("old-policy", first, roles, policy_version="previous")
+        bind("expired", first, roles, expires_at=datetime.now(UTC) - timedelta(seconds=5))
+        bind("lead", first, roles[:1])
+        partial = evaluate(not first_python, diff, "needs_approval")
+        assert partial.approval_summary["missing_approvals"] == roles[1:]
+        assert partial.context_hash == first.context_hash
+        bind("security", first, roles[1:])
+
+        state["packet"].update(decision_id="DEC-2", request_id="REQ-2", created_at="2026-11-18T00:00:00Z")
+        (tmp_path / "run").write_text("import json\nprint(json.dumps({'stage':'dev'}))")
+        assert evaluate(not first_python, diff, "allow").context_hash == first.context_hash
+        second = evaluate(first_python, changed_diff, "needs_approval")
+        assert second.context_hash == first.context_hash
+        bind("new-diff", second, roles)
+        assert evaluate(not first_python, changed_diff, "allow").diff_hash == changed_diff
+
+        (tmp_path / "task").write_text("import json\nprint(json.dumps({'task_id':'T', 'title':'changed'}))")
+        third = evaluate(not first_python, changed_diff, "needs_approval")
+        assert third.context_hash != second.context_hash
+        bind("new-context", third, roles)
+        for python in (True, False):
+            # 保存時点の未承認判定は、後の承認が追加されても再現できる。
+            replay = invoke(config_file, "--tenant", tenant, "replay", "--run", "R", python=python)
+            assert replay["status"] == "verified" and replay["actual_verdict"] == "needs_approval"
+        assert evaluate(first_python, changed_diff, "allow").context_hash == third.context_hash
+        for python in (True, False):
+            assert invoke(config_file, "--tenant", tenant, "replay", "--run", "R", python=python)["actual_verdict"] == "allow"
+
+        bind("unknown-diff", third, roles, diff_hash="0" * 64)
+        evaluate(first_python, None, "needs_approval")
+        evaluate(not first_python, "0" * 64, "needs_approval")
+        state["packet"]["decision"] = "block"
+        evaluate(first_python, changed_diff, "deny")
+    finally:
+        db.engine.dispose()

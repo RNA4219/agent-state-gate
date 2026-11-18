@@ -79,13 +79,19 @@ Context Graph拡張とState-space Gate統合ハーネスの工程統治統合層
 
 ### 5. Approval Binding/Freshness
 
-**AC-012**: diff_hash変更 → 既存approval無効化
+**AC-012**　通常の `gate evaluate` / `gate.evaluate` では、必要な全ロールについて現在の評価対象に有効な承認を要求する。
 
-| 条件 | action |
+| 条件 | 通常評価の扱い |
 |---|---|
-| diff_hash一致 | approval有効 |
-| diff_hash変更 | approval.invalidate |
-| context_hash変更 | waiver.invalidate |
+| テナント・差分ハッシュ・コンテキストハッシュ・ポリシー版が一致し、有効期限内 | 一致した承認記録のロールを合算する |
+| 差分やコンテキストが変化、期限切れ、必要ロールの一部が欠落 | `needs_approval` 以上とし、より厳しい判定を優先する |
+| 承認必須で差分ハッシュが未指定または全桁ゼロ | 対象の差分を特定できるまで承認待ちにする |
+
+コンテキスト変更時は、そのコンテキストに対する既存の waiver も失効する。
+
+承認者は監査パケット内の `assessment.diff_hash`、`assessment.context_hash`、`assessment.policy_version` を確認し、既存の承認ストアにロールとともに記録する。run の `approved_roles` だけでは承認を満たさない。期限は照合時点の UTC と比較し、期限ちょうどで失効する。
+
+コンテキスト指紋 v1 は、差分を除く評価リクエスト、実行主体とロール、ステージ、解決したタスク・run・文書・証跡・判定内容・必要ロールを対象とする。承認状態、文書鮮度の確認時刻、毎回発行される DecisionPacket の判定ID・要求ID・作成時刻は除外する。旧指紋に対する承認は新しい評価で取り直す。リプレイは保存時のロールと判定規則を使い、後日追加・失効した承認に影響されない。
 
 ### 6. Evidence.record
 

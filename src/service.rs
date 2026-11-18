@@ -181,13 +181,7 @@ impl GateService {
                 }
             });
         input["evidence"] = evidence.report();
-        let approved: BTreeSet<String> =
-            serde_json::from_value(run.get("approved_roles").cloned().unwrap_or(json!([])))?;
-        let missing = required
-            .iter()
-            .filter(|r| !approved.contains(**r))
-            .collect::<Vec<_>>();
-        input["approvals"] = json!({"required":required,"approved":approved});
+        input["approvals"] = json!({"required":required,"binding_version":1});
         input["obligation"] = task
             .get("obligation_summary")
             .cloned()
@@ -211,15 +205,6 @@ impl GateService {
         let mut policy_version = &self.config.version;
         let mut threshold = "";
         if let Ok(p) = &packet {
-            let transformed = transform(p, &input, who.roles.contains("admin"));
-            outcome.record(
-                transformed,
-                format!(
-                    "gatefield={} -> {}",
-                    p.decision.name(),
-                    transformed.as_str()
-                ),
-            );
             trace.push(json!({"source":"gatefield","decision_id":p.decision_id,"decision":p.decision,"threshold_version":p.threshold_version}));
             packet_ref = p.reference();
             policy_version = &p.policy_version;
@@ -239,6 +224,36 @@ impl GateService {
             .as_str()
             .or(run["stage"].as_str())
             .unwrap_or("unknown");
+        let context_hash = crate::approval::context_hash(&req, &input, stage, &who.claims());
+        let approved = match req.diff_hash.as_deref() {
+            Some(diff) if !required.is_empty() && diff.bytes().any(|b| b != b'0') => self
+                .db
+                .current_approval_roles(&who.tenant, diff, &context_hash, policy_version)?,
+            _ => BTreeSet::new(),
+        };
+        let missing: Vec<_> = required
+            .iter()
+            .copied()
+            .filter(|role| !approved.contains(*role))
+            .collect();
+        input["approvals"]["approved"] = json!(approved);
+        if let Ok(p) = &packet {
+            let transformed = transform(p, &input, who.roles.contains("admin"));
+            outcome.record(
+                transformed,
+                format!(
+                    "gatefield={} -> {}",
+                    p.decision.name(),
+                    transformed.as_str()
+                ),
+            );
+        }
+        if !missing.is_empty() {
+            outcome.record(
+                Verdict::NeedsApproval,
+                format!("current approval required: {}", missing.join(", ")),
+            );
+        }
         let assessment_id = id("ASM-");
         let audit_id = id("01HAUD");
         let audit_ref = format!("agent-state-gate:audit_packet:local:{audit_id}");
@@ -259,7 +274,7 @@ impl GateService {
             "decision_packet_ref": packet_ref,
             "final_verdict": verdict,
             "verdict_reason": reason,
-            "context_hash": hash(&input),
+            "context_hash": context_hash,
             "diff_hash": req.diff_hash.clone().unwrap_or_else(|| "0".repeat(64)),
             "policy_version": policy_version,
             "threshold_version": threshold,
@@ -301,7 +316,7 @@ impl GateService {
                 "task_id": req.task_id,
                 "run_id": req.run_id,
                 "severity": risk,
-                "required_role": required.first().unwrap_or(&"governance_board"),
+                "required_role": missing.first().or(required.first()).unwrap_or(&"governance_board"),
                 "status": "pending",
                 "verdict": verdict,
                 "reason": reason
@@ -416,6 +431,16 @@ impl GateService {
                 let evidence: Evidence = serde_json::from_value(e)?;
                 verified["evidence"] = evidence.report();
                 verdict = transform(&p, &verified, self.identity.roles.contains("admin"));
+            }
+            let approvals = &input["approvals"];
+            if approvals["binding_version"] == 1 {
+                let required: BTreeSet<String> =
+                    serde_json::from_value(approvals["required"].clone())?;
+                let approved: BTreeSet<String> =
+                    serde_json::from_value(approvals["approved"].clone())?;
+                if !required.is_subset(&approved) {
+                    verdict = verdict.max(Verdict::NeedsApproval);
+                }
             }
             let failures: BTreeMap<String, Verdict> =
                 serde_json::from_value(s["failure_policy_applied"].clone())?;

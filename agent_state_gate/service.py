@@ -49,6 +49,23 @@ _VERDICT_PRIORITY = {
 }
 
 
+def _approval_context_hash(request: GateEvaluationRequest, payload: dict[str, Any], stage: str, identity: dict[str, Any]) -> str:
+    # 承認の取得や再評価自体で変わるメタデータは、承認対象の内容に含めない。
+    material = dict(payload)
+    if isinstance(payload["run"], dict):
+        material["run"] = {k: v for k, v in payload["run"].items() if k != "approved_roles"}
+    if isinstance(payload["stale"], dict):
+        material["stale"] = {k: v for k, v in payload["stale"].items() if k != "last_check_at"}
+    if payload["decision_packet"] is not None:
+        material["decision_packet"] = {
+            k: v for k, v in payload["decision_packet"].items() if k not in {"decision_id", "request_id", "created_at"}
+        }
+    return hash_dict({
+        "version": 1, "request": request.model_dump(mode="json", exclude={"diff_hash"}),
+        "context": material, "stage": stage, "identity": identity,
+    })
+
+
 class GateService:
     """Single application-service boundary used by MCP and CLI."""
 
@@ -260,17 +277,6 @@ class GateService:
             )
             evidence_report = EvidenceReport(required_evidence=["workflow-contract"], collected_evidence=[])
 
-        approved_roles = set((run_data or {}).get("approved_roles", []))
-        missing_approvals = [role for role in required_approvals if role not in approved_roles]
-        approval_summary = ApprovalSummary(
-            missing_approvals=missing_approvals,
-            required_approvals=required_approvals,
-            approved_roles=sorted(approved_roles),
-            approval_rate=(len(required_approvals) - len(missing_approvals)) / len(required_approvals)
-            if required_approvals
-            else 1.0,
-        )
-
         obligation_raw = (task_data or {}).get("obligation_summary", {"fulfillment_rate": 1.0})
         obligation_summary = ObligationSummary(
             fulfillment_rate=float(obligation_raw.get("fulfillment_rate", 1.0)),
@@ -331,18 +337,6 @@ class GateService:
                 applied=applied,
             )
         else:
-            transformed = resolve_verdict(
-                packet.decision,
-                stale_summary,
-                obligation_summary,
-                approval_summary,
-                evidence_summary,
-                permission_level="admin" if "admin" in context.roles else "standard",
-                uncertainty_score=packet.uncertainty_score,
-                self_correction_count=packet.self_correction_count,
-            ).value
-            verdict = self._more_restrictive(verdict, transformed)
-            reasons.append(f"gatefield={packet.decision} -> {transformed}")
             causal_trace.append(
                 {
                     "source": "gatefield",
@@ -374,18 +368,43 @@ class GateService:
             "context_bundle": context_bundle,
             "stale": stale_raw,
             "obligation": obligation_raw,
-            "approvals": {
-                "required": required_approvals,
-                "approved": sorted(approved_roles),
-            },
+            "approvals": {"required": required_approvals, "binding_version": 1},
             "evidence": evidence_report.model_dump(mode="json"),
             "decision_packet": packet.model_dump(mode="json") if packet else None,
         }
-        context_hash = hash_dict(context_payload)
         assessment_id = f"ASM-{uuid.uuid4().hex}"
         packet_ref = decision_ref(packet.decision_id) if packet else ""
         policy_version = packet.policy_version if packet else str(self.config.version)
         threshold_version = packet.threshold_version if packet else ""
+        identity = {"tenant_id": context.tenant_id, "subject": context.subject, "roles": sorted(context.roles)}
+        context_hash = _approval_context_hash(request, context_payload, stage, identity)
+        approved_roles: set[str] = set()
+        if required_approvals and request.diff_hash and request.diff_hash != "0" * 64:
+            approved_roles = self.database.current_approval_roles(
+                context.tenant_id, request.diff_hash, context_hash, policy_version,
+            )
+        missing_approvals = [role for role in required_approvals if role not in approved_roles]
+        context_payload["approvals"]["approved"] = sorted(approved_roles)
+        approval_summary = ApprovalSummary(
+            missing_approvals=missing_approvals, required_approvals=required_approvals, approved_roles=sorted(approved_roles),
+            approval_rate=1 - len(missing_approvals) / len(required_approvals) if required_approvals else 1.0,
+        )
+        if packet is not None:
+            transformed = resolve_verdict(
+                packet.decision,
+                stale_summary,
+                obligation_summary,
+                approval_summary,
+                evidence_summary,
+                permission_level="admin" if "admin" in context.roles else "standard",
+                uncertainty_score=packet.uncertainty_score,
+                self_correction_count=packet.self_correction_count,
+            ).value
+            verdict = self._more_restrictive(verdict, transformed)
+            reasons.append(f"gatefield={packet.decision} -> {transformed}")
+        if missing_approvals:
+            verdict = self._more_restrictive(verdict, Verdict.NEEDS_APPROVAL.value)
+            reasons.append(f"current approval required: {', '.join(missing_approvals)}")
         assessment = AssessmentModel(
             assessment_id=assessment_id,
             tenant_id=context.tenant_id,
@@ -429,21 +448,13 @@ class GateService:
             retention_class="audit" if verdict != Verdict.ALLOW.value else "ops",
             payload=audit_payload,
         )
-        context_identity_hash = hash_dict(
-            {
-                "tenant_id": context.tenant_id,
-                "subject": context.subject,
-                "roles": sorted(context.roles),
-            }
-        )
-
         snapshot_payload = {
             "request": request.model_dump(mode="json"),
             "context_payload": context_payload,
             "expected_verdict": verdict,
             "assessment_id": assessment_id,
             "policy_version": policy_version,
-            "context_identity_hash": context_identity_hash,
+            "context_identity_hash": hash_dict(identity),
             "threshold_version": threshold_version,
             "failure_policy_applied": applied,
             "audit_packet_ref": audit_packet_ref(audit_id),
@@ -480,7 +491,7 @@ class GateService:
                     "task_id": request.task_id,
                     "run_id": request.run_id,
                     "severity": risk_level.value,
-                    "required_role": required_approvals[0] if required_approvals else "governance_board",
+                    "required_role": next(iter(missing_approvals or required_approvals), "governance_board"),
                     "status": "pending",
                     "verdict": verdict,
                     "reason": assessment.verdict_reason,
@@ -602,6 +613,8 @@ class GateService:
                 self_correction_count=packet.self_correction_count,
             ).value
             verdict = self._more_restrictive(verdict, transformed)
+        if approvals_raw.get("binding_version") == 1 and set(approvals_raw["required"]) - set(approvals_raw["approved"]):
+            verdict = self._more_restrictive(verdict, Verdict.NEEDS_APPROVAL.value)
         for applied_verdict in snapshot.get("failure_policy_applied", {}).values():
             verdict = self._more_restrictive(verdict, str(applied_verdict))
         return verdict
